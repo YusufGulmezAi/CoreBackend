@@ -1,0 +1,111 @@
+# docker-compose.dev.yml
+# Geliştirme ortamı için gerekli tüm servisler
+# Kullanım: docker-compose -f docker-compose.dev.yml up -d
+
+version: '3.8'
+
+services:
+  # ═══════════════════════════════════════════════════════════════
+  # PostgreSQL - Ana Veritabanı
+  # Neden: Multi-tenant yapıda her tenant için şema veya DB oluşturacağız
+  # ═══════════════════════════════════════════════════════════════
+  postgres:
+    image: postgres:16-alpine
+    container_name: enterprise-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: DevPassword123!
+      POSTGRES_DB: enterprise_saas
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - enterprise-network
+
+  # ═══════════════════════════════════════════════════════════════
+  # Redis - Cache & Session Store
+  # Neden: JWT token blacklist, distributed cache, rate limiting
+  # ═══════════════════════════════════════════════════════════════
+  redis:
+    image: redis:7-alpine
+    container_name: enterprise-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - enterprise-network
+
+  # ═══════════════════════════════════════════════════════════════
+  # RabbitMQ - Message Broker
+  # Neden: Async işlemler, event-driven architecture, microservices iletişimi
+  # ═══════════════════════════════════════════════════════════════
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: enterprise-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: DevPassword123!
+    ports:
+      - "5672:5672"   # AMQP
+      - "15672:15672" # Management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - enterprise-network
+
+  # ═══════════════════════════════════════════════════════════════
+  # Seq - Centralized Logging
+  # Neden: Structured logging, log arama, hata takibi
+  # ═══════════════════════════════════════════════════════════════
+  seq:
+    image: datalust/seq:latest
+    container_name: enterprise-seq
+    environment:
+      ACCEPT_EULA: "Y"
+      SEQ_FIRSTRUN_ADMINPASSWORD: "DevPassword123!"
+    ports:
+      - "5341:5341" # Ingestion
+      - "8081:80"   # UI
+    volumes:
+      - seq_data:/data
+    networks:
+      - enterprise-network
+
+# ═══════════════════════════════════════════════════════════════
+# Volumes - Kalıcı Veri Depolama
+# ═══════════════════════════════════════════════════════════════
+volumes:
+  postgres_data:
+    name: enterprise-postgres-data
+  redis_data:
+    name: enterprise-redis-data
+  rabbitmq_data:
+    name: enterprise-rabbitmq-data
+  seq_data:
+    name: enterprise-seq-data
+
+# ═══════════════════════════════════════════════════════════════
+# Networks - İzole Ağ
+# ═══════════════════════════════════════════════════════════════
+networks:
+  enterprise-network:
+    name: enterprise-network
+    driver: bridge
