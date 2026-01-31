@@ -1,8 +1,9 @@
 ﻿namespace CoreBackend.Application.Common.Interfaces;
 
 /// <summary>
-/// JWT Token'dan gelen temel kullanıcı bilgileri.
-/// Sadece token'da bulunan minimal bilgileri içerir.
+/// Current user servis interface.
+/// JWT Token'dan gelen temel kullanıcı bilgilerine erişim sağlar.
+/// Detaylı bilgiler (roller, izinler) cache'te tutulur.
 /// </summary>
 public interface ICurrentUserService
 {
@@ -17,12 +18,12 @@ public interface ICurrentUserService
 	Guid? TenantId { get; }
 
 	/// <summary>
-	/// Oturum Id - Cache key olarak kullanılır (Token'dan).
+	/// Mevcut Session Id (Token'dan, cache key olarak kullanılır).
 	/// </summary>
 	string? SessionId { get; }
 
 	/// <summary>
-	/// Token geçerli mi?
+	/// Kullanıcı oturum açmış mı?
 	/// </summary>
 	bool IsAuthenticated { get; }
 }
