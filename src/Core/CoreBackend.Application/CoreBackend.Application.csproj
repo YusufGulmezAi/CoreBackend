@@ -77,8 +77,4 @@
     <PackageReference Include="Microsoft.Extensions.Localization" Version="10.0.2" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Common\Behaviors\" />
-  </ItemGroup>
-
 </Project>
