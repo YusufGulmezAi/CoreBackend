@@ -117,16 +117,73 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="AUTH_FORBIDDEN_ACCESS" xml:space="preserve">
+    <value>Bu kaynağa erişim yasak.</value>
+  </data>
+  <data name="AUTH_INVALID_CREDENTIALS" xml:space="preserve">
+    <value>Geçersiz kullanıcı adı veya şifre.</value>
+  </data>
+  <data name="AUTH_TOKEN_EXPIRED" xml:space="preserve">
+    <value>Oturum süresi doldu.</value>
+  </data>
+  <data name="AUTH_TOKEN_INVALID" xml:space="preserve">
+    <value>Geçersiz oturum bilgisi.</value>
+  </data>
+  <data name="AUTH_UNAUTHORIZED_ACCESS" xml:space="preserve">
+    <value>Yetkisiz erişim denemesi.</value>
+  </data>
+  <data name="AUTH_USER_LOCKED" xml:space="preserve">
+    <value>Kullanıcı hesabı kilitli.</value>
+  </data>
+  <data name="AUTH_USER_NOT_FOUND" xml:space="preserve">
+    <value>Kullanıcı bulunamadı.</value>
+  </data>
+  <data name="COMPANY_ALREADY_EXISTS" xml:space="preserve">
+    <value>Bu şirket zaten kayıtlı.</value>
+  </data>
+  <data name="COMPANY_INACTIVE" xml:space="preserve">
+    <value>Şirket pasif durumda.</value>
+  </data>
+  <data name="COMPANY_INVALID_ACCESS" xml:space="preserve">
+    <value>Geçersiz şirket erişimi.</value>
+  </data>
+  <data name="COMPANY_INVALID_TAX_NUMBER" xml:space="preserve">
+    <value>Geçersiz vergi numarası formatı.</value>
+  </data>
   <data name="COMPANY_NOT_FOUND" xml:space="preserve">
-    <value>{0} ID'li şirket bulunamadı.</value>
+    <value>Şirket bulunamadı.</value>
+  </data>
+  <data name="GENERAL_CONFLICT" xml:space="preserve">
+    <value>Mevcut durumla bir çakışma oluştu.</value>
+  </data>
+  <data name="GENERAL_INVALID_OPERATION" xml:space="preserve">
+    <value>Bu işlem geçerli değil.</value>
   </data>
   <data name="GENERAL_NOT_FOUND" xml:space="preserve">
     <value>İstenen kayıt bulunamadı.</value>
   </data>
+  <data name="GENERAL_NULL_VALUE" xml:space="preserve">
+    <value>Gerekli bir değer sağlanmadı.</value>
+  </data>
+  <data name="GENERAL_UNEXPECTED_ERROR" xml:space="preserve">
+    <value>Beklenmeyen bir hata oluştu.</value>
+  </data>
   <data name="GENERAL_VALIDATION_ERROR" xml:space="preserve">
     <value>Bir veya daha fazla doğrulama hatası oluştu.</value>
   </data>
+  <data name="TENANT_ALREADY_EXISTS" xml:space="preserve">
+    <value>Bu tenant zaten kayıtlı.</value>
+  </data>
+  <data name="TENANT_INACTIVE" xml:space="preserve">
+    <value>Tenant hesabı pasif durumda.</value>
+  </data>
+  <data name="TENANT_INVALID_ACCESS" xml:space="preserve">
+    <value>Geçersiz tenant erişimi.</value>
+  </data>
   <data name="TENANT_NOT_FOUND" xml:space="preserve">
-    <value>{0} ID'li tenant bulunamadı.</value>
+    <value>Tenant bulunamadı.</value>
+  </data>
+  <data name="TENANT_SUSPENDED" xml:space="preserve">
+    <value>Tenant hesabı askıya alınmış.</value>
   </data>
 </root>

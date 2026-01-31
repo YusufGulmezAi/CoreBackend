@@ -61,11 +61,128 @@ namespace CoreBackend.Application.Resources.ErrorMessages {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to {0} ID&apos;li şirket bulunamadı..
+        ///   Looks up a localized string similar to Bu kaynağa erişim yasak..
+        /// </summary>
+        public static string AUTH_FORBIDDEN_ACCESS {
+            get {
+                return ResourceManager.GetString("AUTH_FORBIDDEN_ACCESS", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Geçersiz kullanıcı adı veya şifre..
+        /// </summary>
+        public static string AUTH_INVALID_CREDENTIALS {
+            get {
+                return ResourceManager.GetString("AUTH_INVALID_CREDENTIALS", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Oturum süresi doldu..
+        /// </summary>
+        public static string AUTH_TOKEN_EXPIRED {
+            get {
+                return ResourceManager.GetString("AUTH_TOKEN_EXPIRED", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Geçersiz oturum bilgisi..
+        /// </summary>
+        public static string AUTH_TOKEN_INVALID {
+            get {
+                return ResourceManager.GetString("AUTH_TOKEN_INVALID", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Yetkisiz erişim denemesi..
+        /// </summary>
+        public static string AUTH_UNAUTHORIZED_ACCESS {
+            get {
+                return ResourceManager.GetString("AUTH_UNAUTHORIZED_ACCESS", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Kullanıcı hesabı kilitli..
+        /// </summary>
+        public static string AUTH_USER_LOCKED {
+            get {
+                return ResourceManager.GetString("AUTH_USER_LOCKED", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Kullanıcı bulunamadı..
+        /// </summary>
+        public static string AUTH_USER_NOT_FOUND {
+            get {
+                return ResourceManager.GetString("AUTH_USER_NOT_FOUND", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Bu şirket zaten kayıtlı..
+        /// </summary>
+        public static string COMPANY_ALREADY_EXISTS {
+            get {
+                return ResourceManager.GetString("COMPANY_ALREADY_EXISTS", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Şirket pasif durumda..
+        /// </summary>
+        public static string COMPANY_INACTIVE {
+            get {
+                return ResourceManager.GetString("COMPANY_INACTIVE", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Geçersiz şirket erişimi..
+        /// </summary>
+        public static string COMPANY_INVALID_ACCESS {
+            get {
+                return ResourceManager.GetString("COMPANY_INVALID_ACCESS", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Geçersiz vergi numarası formatı..
+        /// </summary>
+        public static string COMPANY_INVALID_TAX_NUMBER {
+            get {
+                return ResourceManager.GetString("COMPANY_INVALID_TAX_NUMBER", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Şirket bulunamadı..
         /// </summary>
         public static string COMPANY_NOT_FOUND {
             get {
                 return ResourceManager.GetString("COMPANY_NOT_FOUND", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Mevcut durumla bir çakışma oluştu..
+        /// </summary>
+        public static string GENERAL_CONFLICT {
+            get {
+                return ResourceManager.GetString("GENERAL_CONFLICT", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Bu işlem geçerli değil..
+        /// </summary>
+        public static string GENERAL_INVALID_OPERATION {
+            get {
+                return ResourceManager.GetString("GENERAL_INVALID_OPERATION", resourceCulture);
             }
         }
         
@@ -79,6 +196,24 @@ namespace CoreBackend.Application.Resources.ErrorMessages {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Gerekli bir değer sağlanmadı..
+        /// </summary>
+        public static string GENERAL_NULL_VALUE {
+            get {
+                return ResourceManager.GetString("GENERAL_NULL_VALUE", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Beklenmeyen bir hata oluştu..
+        /// </summary>
+        public static string GENERAL_UNEXPECTED_ERROR {
+            get {
+                return ResourceManager.GetString("GENERAL_UNEXPECTED_ERROR", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Bir veya daha fazla doğrulama hatası oluştu..
         /// </summary>
         public static string GENERAL_VALIDATION_ERROR {
@@ -88,11 +223,47 @@ namespace CoreBackend.Application.Resources.ErrorMessages {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to {0} ID&apos;li tenant bulunamadı..
+        ///   Looks up a localized string similar to Bu tenant zaten kayıtlı..
+        /// </summary>
+        public static string TENANT_ALREADY_EXISTS {
+            get {
+                return ResourceManager.GetString("TENANT_ALREADY_EXISTS", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Tenant hesabı pasif durumda..
+        /// </summary>
+        public static string TENANT_INACTIVE {
+            get {
+                return ResourceManager.GetString("TENANT_INACTIVE", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Geçersiz tenant erişimi..
+        /// </summary>
+        public static string TENANT_INVALID_ACCESS {
+            get {
+                return ResourceManager.GetString("TENANT_INVALID_ACCESS", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Tenant bulunamadı..
         /// </summary>
         public static string TENANT_NOT_FOUND {
             get {
                 return ResourceManager.GetString("TENANT_NOT_FOUND", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Tenant hesabı askıya alınmış..
+        /// </summary>
+        public static string TENANT_SUSPENDED {
+            get {
+                return ResourceManager.GetString("TENANT_SUSPENDED", resourceCulture);
             }
         }
     }

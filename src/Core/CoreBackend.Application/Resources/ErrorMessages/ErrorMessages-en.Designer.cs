@@ -59,5 +59,212 @@ namespace CoreBackend.Application.Resources.ErrorMessages {
                 resourceCulture = value;
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Access to this resource is forbidden..
+        /// </summary>
+        internal static string AUTH_FORBIDDEN_ACCESS {
+            get {
+                return ResourceManager.GetString("AUTH_FORBIDDEN_ACCESS", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Invalid username or password..
+        /// </summary>
+        internal static string AUTH_INVALID_CREDENTIALS {
+            get {
+                return ResourceManager.GetString("AUTH_INVALID_CREDENTIALS", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Token has expired..
+        /// </summary>
+        internal static string AUTH_TOKEN_EXPIRED {
+            get {
+                return ResourceManager.GetString("AUTH_TOKEN_EXPIRED", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Token is invalid..
+        /// </summary>
+        internal static string AUTH_TOKEN_INVALID {
+            get {
+                return ResourceManager.GetString("AUTH_TOKEN_INVALID", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Unauthorized access attempt..
+        /// </summary>
+        internal static string AUTH_UNAUTHORIZED_ACCESS {
+            get {
+                return ResourceManager.GetString("AUTH_UNAUTHORIZED_ACCESS", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to User account is locked..
+        /// </summary>
+        internal static string AUTH_USER_LOCKED {
+            get {
+                return ResourceManager.GetString("AUTH_USER_LOCKED", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to User not found..
+        /// </summary>
+        internal static string AUTH_USER_NOT_FOUND {
+            get {
+                return ResourceManager.GetString("AUTH_USER_NOT_FOUND", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Company already exists..
+        /// </summary>
+        internal static string COMPANY_ALREADY_EXISTS {
+            get {
+                return ResourceManager.GetString("COMPANY_ALREADY_EXISTS", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Company is inactive..
+        /// </summary>
+        internal static string COMPANY_INACTIVE {
+            get {
+                return ResourceManager.GetString("COMPANY_INACTIVE", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Invalid company access..
+        /// </summary>
+        internal static string COMPANY_INVALID_ACCESS {
+            get {
+                return ResourceManager.GetString("COMPANY_INVALID_ACCESS", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Invalid tax number format..
+        /// </summary>
+        internal static string COMPANY_INVALID_TAX_NUMBER {
+            get {
+                return ResourceManager.GetString("COMPANY_INVALID_TAX_NUMBER", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Company not found..
+        /// </summary>
+        internal static string COMPANY_NOT_FOUND {
+            get {
+                return ResourceManager.GetString("COMPANY_NOT_FOUND", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to A conflict occurred with the current state..
+        /// </summary>
+        internal static string GENERAL_CONFLICT {
+            get {
+                return ResourceManager.GetString("GENERAL_CONFLICT", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to This operation is not valid..
+        /// </summary>
+        internal static string GENERAL_INVALID_OPERATION {
+            get {
+                return ResourceManager.GetString("GENERAL_INVALID_OPERATION", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The requested resource was not found..
+        /// </summary>
+        internal static string GENERAL_NOT_FOUND {
+            get {
+                return ResourceManager.GetString("GENERAL_NOT_FOUND", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to A required value was not provided..
+        /// </summary>
+        internal static string GENERAL_NULL_VALUE {
+            get {
+                return ResourceManager.GetString("GENERAL_NULL_VALUE", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to An unexpected error occurred..
+        /// </summary>
+        internal static string GENERAL_UNEXPECTED_ERROR {
+            get {
+                return ResourceManager.GetString("GENERAL_UNEXPECTED_ERROR", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to One or more validation errors occurred..
+        /// </summary>
+        internal static string GENERAL_VALIDATION_ERROR {
+            get {
+                return ResourceManager.GetString("GENERAL_VALIDATION_ERROR", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Tenant already exists..
+        /// </summary>
+        internal static string TENANT_ALREADY_EXISTS {
+            get {
+                return ResourceManager.GetString("TENANT_ALREADY_EXISTS", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Tenant account is inactive..
+        /// </summary>
+        internal static string TENANT_INACTIVE {
+            get {
+                return ResourceManager.GetString("TENANT_INACTIVE", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Invalid tenant access..
+        /// </summary>
+        internal static string TENANT_INVALID_ACCESS {
+            get {
+                return ResourceManager.GetString("TENANT_INVALID_ACCESS", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Tenant not found..
+        /// </summary>
+        internal static string TENANT_NOT_FOUND {
+            get {
+                return ResourceManager.GetString("TENANT_NOT_FOUND", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Tenant account is suspended..
+        /// </summary>
+        internal static string TENANT_SUSPENDED {
+            get {
+                return ResourceManager.GetString("TENANT_SUSPENDED", resourceCulture);
+            }
+        }
     }
 }
