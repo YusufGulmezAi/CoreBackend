@@ -19,6 +19,14 @@ public class Role : TenantAuditableEntity<Guid>
 	/// </summary>
 	public string Code { get; private set; } = null!;
 
+
+	/// <summary>
+	/// Rol bazlı session zaman aşımı süresi (dakika).
+	/// null ise tenant veya global ayar kullanılır.
+	/// </summary>
+	public int? SessionTimeoutMinutes { get; private set; }
+
+
 	/// <summary>
 	/// Rol açıklaması.
 	/// </summary>
@@ -49,7 +57,8 @@ public class Role : TenantAuditableEntity<Guid>
 		string code,
 		string? description,
 		RoleLevel level,
-		bool isSystemRole) : base(id, tenantId)
+		bool isSystemRole,
+		int? sessionTimeoutMinutes) : base(id, tenantId)
 	{
 		Name = name;
 		Code = code;
@@ -57,6 +66,7 @@ public class Role : TenantAuditableEntity<Guid>
 		Level = level;
 		IsSystemRole = isSystemRole;
 		IsActive = true;
+		SessionTimeoutMinutes = sessionTimeoutMinutes;
 	}
 
 	/// <summary>
@@ -68,7 +78,8 @@ public class Role : TenantAuditableEntity<Guid>
 		string code,
 		RoleLevel level,
 		string? description = null,
-		bool isSystemRole = false)
+		bool isSystemRole = false,
+		int? sessionTimeoutMinutes = null)
 	{
 		return new Role(
 			Guid.NewGuid(),
@@ -77,7 +88,8 @@ public class Role : TenantAuditableEntity<Guid>
 			code,
 			description,
 			level,
-			isSystemRole);
+			isSystemRole,
+			sessionTimeoutMinutes);
 	}
 
 	/// <summary>
@@ -110,4 +122,13 @@ public class Role : TenantAuditableEntity<Guid>
 
 		IsActive = false;
 	}
+
+	/// <summary>
+	/// Session timeout süresini günceller.
+	/// </summary>
+	public void UpdateSessionTimeout(int? sessionTimeoutMinutes)
+	{
+		SessionTimeoutMinutes = sessionTimeoutMinutes;
+	}
+
 }

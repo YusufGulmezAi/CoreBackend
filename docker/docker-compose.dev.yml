@@ -1,14 +1,4 @@
-# docker-compose.dev.yml
-# Geliştirme ortamı için gerekli tüm servisler
-# Kullanım: docker-compose -f docker-compose.dev.yml up -d
-
-version: '3.8'
-
 services:
-  # ═══════════════════════════════════════════════════════════════
-  # PostgreSQL - Ana Veritabanı
-  # Neden: Multi-tenant yapıda her tenant için şema veya DB oluşturacağız
-  # ═══════════════════════════════════════════════════════════════
   postgres:
     image: postgres:16-alpine
     container_name: enterprise-postgres
@@ -28,10 +18,6 @@ services:
     networks:
       - enterprise-network
 
-  # ═══════════════════════════════════════════════════════════════
-  # Redis - Cache & Session Store
-  # Neden: JWT token blacklist, distributed cache, rate limiting
-  # ═══════════════════════════════════════════════════════════════
   redis:
     image: redis:7-alpine
     container_name: enterprise-redis
@@ -48,10 +34,6 @@ services:
     networks:
       - enterprise-network
 
-  # ═══════════════════════════════════════════════════════════════
-  # RabbitMQ - Message Broker
-  # Neden: Async işlemler, event-driven architecture, microservices iletişimi
-  # ═══════════════════════════════════════════════════════════════
   rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: enterprise-rabbitmq
@@ -59,8 +41,8 @@ services:
       RABBITMQ_DEFAULT_USER: admin
       RABBITMQ_DEFAULT_PASS: DevPassword123!
     ports:
-      - "5672:5672"   # AMQP
-      - "15672:15672" # Management UI
+      - "5672:5672"
+      - "15672:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
@@ -71,10 +53,6 @@ services:
     networks:
       - enterprise-network
 
-  # ═══════════════════════════════════════════════════════════════
-  # Seq - Centralized Logging
-  # Neden: Structured logging, log arama, hata takibi
-  # ═══════════════════════════════════════════════════════════════
   seq:
     image: datalust/seq:latest
     container_name: enterprise-seq
@@ -82,16 +60,13 @@ services:
       ACCEPT_EULA: "Y"
       SEQ_FIRSTRUN_ADMINPASSWORD: "DevPassword123!"
     ports:
-      - "5341:5341" # Ingestion
-      - "8081:80"   # UI
+      - "5341:5341"
+      - "8081:80"
     volumes:
       - seq_data:/data
     networks:
       - enterprise-network
 
-# ═══════════════════════════════════════════════════════════════
-# Volumes - Kalıcı Veri Depolama
-# ═══════════════════════════════════════════════════════════════
 volumes:
   postgres_data:
     name: enterprise-postgres-data
@@ -102,9 +77,6 @@ volumes:
   seq_data:
     name: enterprise-seq-data
 
-# ═══════════════════════════════════════════════════════════════
-# Networks - İzole Ağ
-# ═══════════════════════════════════════════════════════════════
 networks:
   enterprise-network:
     name: enterprise-network

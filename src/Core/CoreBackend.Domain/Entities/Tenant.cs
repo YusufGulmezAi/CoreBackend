@@ -50,6 +50,14 @@ public class Tenant : AuditableEntity<Guid>
 	/// </summary>
 	public string? Settings { get; private set; }
 
+	/// <summary>
+	/// Tenant bazlı session zaman aşımı süresi (dakika).
+	/// null ise global ayar kullanılır.
+	/// </summary>
+	public int? SessionTimeoutMinutes { get; private set; }
+
+
+
 	// EF Core için private constructor
 	private Tenant() : base() { }
 
@@ -58,32 +66,37 @@ public class Tenant : AuditableEntity<Guid>
 		string name,
 		string email,
 		string? phone,
-		int maxCompanyCount) : base(id)
+		int maxCompanyCount,
+		int? sessionTimeoutMinutes) : base(id)
 	{
 		Name = name;
 		Email = email;
 		Phone = phone;
-		Status = TenantStatus.Trial;
-		SubscriptionStartDate = DateTime.UtcNow;
+		Status = TenantStatus.Active;
 		MaxCompanyCount = maxCompanyCount;
+		SessionTimeoutMinutes = sessionTimeoutMinutes;
+		SubscriptionStartDate = DateTime.UtcNow;
 	}
 
-	/// <summary>
+		/// <summary>
 	/// Yeni tenant oluşturur.
 	/// </summary>
 	public static Tenant Create(
 		string name,
 		string email,
 		string? phone = null,
-		int maxCompanyCount = 5)
+		int maxCompanyCount = 5,
+		int? sessionTimeoutMinutes = null)
 	{
 		return new Tenant(
 			Guid.NewGuid(),
 			name,
 			email,
 			phone,
-			maxCompanyCount);
+			maxCompanyCount,
+			sessionTimeoutMinutes);
 	}
+
 
 	/// <summary>
 	/// Tenant bilgilerini günceller.
@@ -144,4 +157,13 @@ public class Tenant : AuditableEntity<Guid>
 	{
 		Settings = settings;
 	}
+
+	/// <summary>
+	/// Session timeout süresini günceller.
+	/// </summary>
+	public void UpdateSessionTimeout(int? sessionTimeoutMinutes)
+	{
+		SessionTimeoutMinutes = sessionTimeoutMinutes;
+	}
+
 }
