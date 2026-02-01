@@ -1,14 +1,15 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using StackExchange.Redis;
-using CoreBackend.Application.Common.Interfaces;
+﻿using CoreBackend.Application.Common.Interfaces;
+using CoreBackend.Application.Common.Settings;
 using CoreBackend.Infrastructure.Persistence;
 using CoreBackend.Infrastructure.Persistence.Context;
 using CoreBackend.Infrastructure.Persistence.Repositories;
 using CoreBackend.Infrastructure.Services;
 using CoreBackend.Infrastructure.Services.Caching;
 using CoreBackend.Infrastructure.Services.Localization;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using StackExchange.Redis;
 
 namespace CoreBackend.Infrastructure;
 
@@ -21,24 +22,10 @@ public static class DependencyInjection
 		this IServiceCollection services,
 		IConfiguration configuration)
 	{
-		// Password Hasher
-		services.AddScoped<IPasswordHasher, PasswordHasher>();
-
-		// JWT Service
-		services.AddScoped<IJwtService, JwtService>();
-
-		// Database
 		services.AddDatabase(configuration);
-
-		// Redis Cache
-		services.AddRedisCache(configuration);
-
-		// Repositories
 		services.AddRepositories();
-		// Device Info Service
-		services.AddScoped<IDeviceInfoService, DeviceInfoService>();
-		// Services
-		services.AddServices();
+		services.AddServices(configuration);
+		services.AddCaching(configuration);
 
 		return services;
 	}
@@ -89,32 +76,6 @@ public static class DependencyInjection
 		return services;
 	}
 
-	/// <summary>
-	/// Redis cache yapılandırması.
-	/// </summary>
-	private static IServiceCollection AddRedisCache(
-		this IServiceCollection services,
-		IConfiguration configuration)
-	{
-		var redisConnectionString = configuration.GetConnectionString("Redis") ?? "localhost:6379";
-
-		// Redis connection multiplexer
-		services.AddSingleton<IConnectionMultiplexer>(sp =>
-		{
-			var configurationOptions = ConfigurationOptions.Parse(redisConnectionString);
-			configurationOptions.AbortOnConnectFail = false;
-			return ConnectionMultiplexer.Connect(configurationOptions);
-		});
-
-		// Distributed cache
-		services.AddStackExchangeRedisCache(options =>
-		{
-			options.Configuration = redisConnectionString;
-			options.InstanceName = "CoreBackend:";
-		});
-
-		return services;
-	}
 
 	/// <summary>
 	/// Repository kayıtları.
@@ -134,30 +95,74 @@ public static class DependencyInjection
 	/// <summary>
 	/// Servis kayıtları.
 	/// </summary>
-	private static IServiceCollection AddServices(this IServiceCollection services)
+	private static IServiceCollection AddServices(this IServiceCollection services,
+		IConfiguration configuration)
 	{
+		// Settings
+		services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
+		services.Configure<SessionSettings>(configuration.GetSection(SessionSettings.SectionName));
+		services.Configure<EmailSettings>(configuration.GetSection(EmailSettings.SectionName));
+		services.Configure<NetgsmSettings>(configuration.GetSection(NetgsmSettings.SectionName));
+
+		// Core Services
+		services.AddScoped<ITenantService, TenantService>();
+		services.AddScoped<ICurrentUserService, CurrentUserService>();
+		services.AddScoped<IUserSessionService, UserSessionService>();
+		services.AddScoped<ILocalizationService, LocalizationService>();
+
+		// Auth Services
+		services.AddScoped<IPasswordHasher, PasswordHasher>();
+		services.AddScoped<IJwtService, JwtService>();
+		services.AddScoped<IDeviceInfoService, DeviceInfoService>();
+		services.AddScoped<ITotpService, TotpService>();
+
+		// Session History Service
+		services.AddScoped<ISessionHistoryService, SessionHistoryService>();
+
+		// Email Service
+		services.AddScoped<IEmailService, EmailService>();
+
+		// SMS Service (HttpClient ile)
+		services.AddHttpClient<ISmsService, NetgsmSmsService>(client =>
+		{
+			client.Timeout = TimeSpan.FromSeconds(30);
+		});
+
 		// Http Context Accessor
 		services.AddHttpContextAccessor();
 
-		// Tenant & User Services
-		services.AddScoped<ITenantService, TenantService>();
-		services.AddScoped<ICurrentUserService, CurrentUserService>();
+		return services;
+	}
 
-		// Cache Service
-		services.AddScoped<ICacheService, RedisCacheService>();
 
-		// Session Service
-		services.AddScoped<IUserSessionService, UserSessionService>();
+	/// <summary>
+	/// Cache servislerini ekler.
+	/// </summary>
+	private static IServiceCollection AddCaching(
+		this IServiceCollection services,
+		IConfiguration configuration)
+	{
+		var redisConnection = configuration.GetConnectionString("Redis");
 
-		// Localization Service
-		services.AddSingleton<ILocalizationService, LocalizationService>();
+		if (!string.IsNullOrEmpty(redisConnection))
+		{
+			services.AddStackExchangeRedisCache(options =>
+			{
+				options.Configuration = redisConnection;
+				options.InstanceName = "CoreBackend:";
+			});
 
-		// Password Hasher
-		services.AddScoped<IPasswordHasher, PasswordHasher>();
-
-		// JWT Service
-		services.AddScoped<IJwtService, JwtService>();
+			services.AddScoped<ICacheService, RedisCacheService>();
+		}
+		else
+		{
+			// Redis yoksa memory cache kullan
+			services.AddDistributedMemoryCache();
+			services.AddScoped<ICacheService, RedisCacheService>();
+		}
 
 		return services;
 	}
+
+
 }

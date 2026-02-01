@@ -2,64 +2,67 @@ namespace CoreBackend.Application.Common.Interfaces;
 
 /// <summary>
 /// User session servis interface.
-/// Cache'teki (Redis) session verilerine eriþim ve yönetim saðlar.
-/// Token'da tutulmayan detaylý bilgiler burada saklanýr.
 /// </summary>
 public interface IUserSessionService
 {
 	/// <summary>
-	/// Session bilgilerini cache'ten getirir.
+	/// Session oluþturur.
 	/// </summary>
-	Task<UserSessionData?> GetSessionAsync(string sessionId, CancellationToken cancellationToken = default);
-
-	/// <summary>
-	/// Yeni session oluþturur ve cache'e kaydeder.
-	/// </summary>
-	Task<string> CreateSessionAsync(UserSessionData sessionData, CancellationToken cancellationToken = default);
-
-	/// <summary>
-	/// Session bilgilerini günceller.
-	/// </summary>
-	Task UpdateSessionAsync(string sessionId, UserSessionData sessionData, CancellationToken cancellationToken = default);
-
-	/// <summary>
-	/// Session'ý sonlandýrýr (cache'ten siler).
-	/// Admin tarafýndan kullanýcýyý anýnda çýkarmak için kullanýlýr.
-	/// </summary>
-	Task RevokeSessionAsync(string sessionId, CancellationToken cancellationToken = default);
-
-	/// <summary>
-	/// Kullanýcýnýn tüm session'larýný sonlandýrýr.
-	/// Þifre deðiþikliði, güvenlik ihlali durumunda kullanýlýr.
-	/// </summary>
-	Task RevokeAllUserSessionsAsync(Guid userId, CancellationToken cancellationToken = default);
-
-	/// <summary>
-	/// Tenant'ýn tüm session'larýný sonlandýrýr.
-	/// Tenant askýya alýndýðýnda kullanýlýr.
-	/// </summary>
-	Task RevokeAllTenantSessionsAsync(Guid tenantId, CancellationToken cancellationToken = default);
-
-	/// <summary>
-	/// Session'ýn geçerli olup olmadýðýný kontrol eder.
-	/// IP, Browser deðiþikliði kontrolü dahil.
-	/// </summary>
-	Task<SessionValidationResult> ValidateSessionAsync(
-		string sessionId,
-		string currentIp,
-		string currentUserAgent,
+	Task<string> CreateSessionAsync(
+		UserSessionData sessionData,
 		CancellationToken cancellationToken = default);
 
 	/// <summary>
-	/// Kullanýcýnýn aktif session'larýný listeler.
+	/// Session getirir.
 	/// </summary>
-	Task<IReadOnlyList<UserSessionData>> GetUserActiveSessionsAsync(Guid userId, CancellationToken cancellationToken = default);
+	Task<UserSessionData?> GetSessionAsync(
+		string sessionId,
+		CancellationToken cancellationToken = default);
 
 	/// <summary>
-	/// Session'daki rol ve izinleri günceller.
-	/// Admin tarafýndan yetki deðiþikliði yapýldýðýnda kullanýlýr.
+	/// Session günceller.
 	/// </summary>
-	Task RefreshSessionPermissionsAsync(string sessionId, CancellationToken cancellationToken = default);
+	Task UpdateSessionAsync(
+		string sessionId,
+		UserSessionData sessionData,
+		CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Session'ý iptal eder.
+	/// </summary>
+	Task RevokeSessionAsync(
+		string sessionId,
+		CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Kullanýcýnýn tüm session'larýný iptal eder.
+	/// </summary>
+	Task RevokeAllUserSessionsAsync(
+		Guid userId,
+		CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Kullanýcýnýn aktif session'larýný getirir.
+	/// </summary>
+	Task<IReadOnlyList<UserSessionData>> GetUserActiveSessionsAsync(
+		Guid userId,
+		CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Session'ýn geçerliliðini kontrol eder.
+	/// </summary>
+	Task<bool> ValidateSessionAsync(
+		string sessionId,
+		string? ipAddress = null,
+		string? userAgent = null,
+		CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Session aktivitesini günceller.
+	/// </summary>
+	Task RefreshSessionActivityAsync(
+		string sessionId,
+		CancellationToken cancellationToken = default);
 }
 
 /// <summary>

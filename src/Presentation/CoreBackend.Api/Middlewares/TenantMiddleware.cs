@@ -29,24 +29,71 @@ public class TenantMiddleware
 		_logger = logger;
 	}
 
-	public async Task InvokeAsync(HttpContext context, ITenantService tenantService)
+	public async Task InvokeAsync(
+		HttpContext context,
+		ITenantService tenantService,
+		IUserSessionService sessionService,
+		IDeviceInfoService deviceInfoService)
 	{
-		var path = context.Request.Path.Value?.ToLower() ?? string.Empty;
+		// Public endpoint'ler için skip
+		var endpoint = context.GetEndpoint();
+		var allowAnonymous = endpoint?.Metadata.GetMetadata<Microsoft.AspNetCore.Authorization.AllowAnonymousAttribute>();
 
-		// Excluded path kontrolü
-		if (ExcludedPaths.Any(p => path.StartsWith(p)))
+		if (allowAnonymous != null)
 		{
 			await _next(context);
 			return;
 		}
 
-		// Tenant Id'yi çözümle
-		var tenantId = ResolveTenantId(context);
-
-		if (tenantId.HasValue)
+		// Authenticated kullanıcı için tenant ve session kontrolü
+		if (context.User.Identity?.IsAuthenticated == true)
 		{
-			tenantService.SetTenantId(tenantId.Value);
-			_logger.LogDebug("Tenant resolved: {TenantId}", tenantId.Value);
+			var tenantIdClaim = context.User.FindFirst("tenant_id")?.Value;
+			var sessionIdClaim = context.User.FindFirst("session_id")?.Value;
+
+			if (!string.IsNullOrEmpty(tenantIdClaim) && Guid.TryParse(tenantIdClaim, out var tenantId))
+			{
+				tenantService.SetTenantId(tenantId);
+			}
+
+			// Session doğrulaması
+			if (!string.IsNullOrEmpty(sessionIdClaim))
+			{
+				var ipAddress = deviceInfoService.GetIpAddress();
+				var userAgent = deviceInfoService.GetUserAgent();
+
+				var isValid = await sessionService.ValidateSessionAsync(
+					sessionIdClaim,
+					ipAddress,
+					userAgent,
+					context.RequestAborted);
+
+				if (!isValid)
+				{
+					_logger.LogWarning("Invalid session: {SessionId}", sessionIdClaim);
+					context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+					await context.Response.WriteAsJsonAsync(new
+					{
+						success = false,
+						message = "Session expired or invalid.",
+						errorCode = "SESSION_INVALID"
+					});
+					return;
+				}
+
+				// Session aktivitesini güncelle
+				await sessionService.RefreshSessionActivityAsync(sessionIdClaim, context.RequestAborted);
+			}
+		}
+		else
+		{
+			// Header'dan tenant alma (public API'ler için)
+			var tenantHeader = context.Request.Headers["X-Tenant-Id"].FirstOrDefault();
+
+			if (!string.IsNullOrEmpty(tenantHeader) && Guid.TryParse(tenantHeader, out var headerTenantId))
+			{
+				tenantService.SetTenantId(headerTenantId);
+			}
 		}
 
 		await _next(context);

@@ -41,7 +41,7 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Resul
 		if (!tenantId.HasValue)
 		{
 			return Result.Failure<UserResponse>(
-				Error.Create(ErrorCodes.Auth.Unauthorized, "Tenant not found."));
+				Error.Create(ErrorCodes.Auth.UnauthorizedAccess, "Tenant not found."));
 		}
 
 		// Email benzersizlik kontrolü

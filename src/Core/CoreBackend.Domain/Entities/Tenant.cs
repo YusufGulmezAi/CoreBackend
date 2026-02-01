@@ -56,6 +56,15 @@ public class Tenant : AuditableEntity<Guid>
 	/// </summary>
 	public int? SessionTimeoutMinutes { get; private set; }
 
+	// 2FA Policy Alanları (mevcut alanlara ekle)
+	public TwoFactorPolicy TwoFactorPolicy { get; private set; }
+
+	/// <summary>
+	/// Geçerli kullanıcı veya bağlam için izin verilen iki faktörlü kimlik doğrulama yöntemlerinin listesini alır.
+	/// </summary>
+	/// <remarks>Koleksiyon, kullanıcının kimlik doğrulama için seçebileceği veya kullanabileceği tüm mevcut iki faktörlü yöntemleri içerir.
+	/// Liste salt okunurdur ve hiçbir yönteme izin verilmiyorsa boş olacaktır.</remarks>
+	public List<TwoFactorMethod> AllowedTwoFactorMethods { get; private set; } = new();
 
 
 	// EF Core için private constructor
@@ -164,6 +173,23 @@ public class Tenant : AuditableEntity<Guid>
 	public void UpdateSessionTimeout(int? sessionTimeoutMinutes)
 	{
 		SessionTimeoutMinutes = sessionTimeoutMinutes;
+	}
+
+	// 2FA Policy Metodları
+	/// <summary>
+	/// 2FA politikasını ayarlar.
+	/// </summary>
+	public void SetTwoFactorPolicy(TwoFactorPolicy policy)
+	{
+		TwoFactorPolicy = policy;
+	}
+
+	/// <summary>
+	/// İzin verilen 2FA metodlarını ayarlar.
+	/// </summary>
+	public void SetAllowedTwoFactorMethods(List<TwoFactorMethod> methods)
+	{
+		AllowedTwoFactorMethods = methods;
 	}
 
 }

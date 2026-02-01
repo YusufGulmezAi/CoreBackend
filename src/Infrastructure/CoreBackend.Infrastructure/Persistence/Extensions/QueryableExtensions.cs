@@ -26,15 +26,23 @@ public static class QueryableExtensions
 			query = query.AsNoTracking();
 
 		// Includes
-		if (dynamicQuery.Includes.Any())
+		if (dynamicQuery.Includes?.Any() == true)
 			query = query.ApplyIncludes(dynamicQuery.Includes);
 
 		// Filters
-		if (dynamicQuery.Filter != null)
-			query = query.ApplyFilterGroup(dynamicQuery.Filter);
+		if (dynamicQuery.Filters?.Any() == true)
+		{
+			// List<FilterDescriptor>'ı FilterGroup içine sarıyoruz
+			var filterGroup = new FilterGroup
+			{
+				Filters = dynamicQuery.Filters,
+				Logic = FilterLogic.And
+			};
+			query = query.ApplyFilterGroup(filterGroup);
+		}
 
 		// Sorting
-		if (dynamicQuery.Sort.Any())
+		if (dynamicQuery.Sort?.Any() == true)
 			query = query.ApplySorting(dynamicQuery.Sort);
 
 		return query;

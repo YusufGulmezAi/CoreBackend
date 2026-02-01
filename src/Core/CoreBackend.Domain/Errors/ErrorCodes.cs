@@ -178,4 +178,40 @@ public static class ErrorCodes
 		public const string EmailAlreadyExists = "USER_EMAIL_ALREADY_EXISTS";
 		public const string CannotDeleteSelf = "USER_CANNOT_DELETE_SELF";
 	}
+
+	public static class Session
+	{
+		public const string NotFound = "SESSION_NOT_FOUND";
+		public const string Expired = "SESSION_EXPIRED";
+		public const string Revoked = "SESSION_REVOKED";
+		public const string InvalidIp = "SESSION_INVALID_IP";
+		public const string InvalidUserAgent = "SESSION_INVALID_USER_AGENT";
+	}
+
+	public static class TwoFactor
+	{
+		public const string NotEnabled = "2FA_NOT_ENABLED";
+		public const string AlreadyEnabled = "2FA_ALREADY_ENABLED";
+		public const string InvalidCode = "2FA_INVALID_CODE";
+		public const string CodeExpired = "2FA_CODE_EXPIRED";
+		public const string MaxAttemptsExceeded = "2FA_MAX_ATTEMPTS_EXCEEDED";
+		public const string MethodNotAllowed = "2FA_METHOD_NOT_ALLOWED";
+		public const string Required = "2FA_REQUIRED";
+		public const string InvalidRecoveryCode = "2FA_INVALID_RECOVERY_CODE";
+		public const string NoRecoveryCodes = "2FA_NO_RECOVERY_CODES";
+		public const string SetupRequired = "2FA_SETUP_REQUIRED";
+	}
+
+	public static class Sms
+	{
+		public const string SendFailed = "SMS_SEND_FAILED";
+		public const string InvalidPhoneNumber = "SMS_INVALID_PHONE_NUMBER";
+		public const string QuotaExceeded = "SMS_QUOTA_EXCEEDED";
+	}
+
+	public static class Email
+	{
+		public const string SendFailed = "EMAIL_SEND_FAILED";
+	}
+
 }

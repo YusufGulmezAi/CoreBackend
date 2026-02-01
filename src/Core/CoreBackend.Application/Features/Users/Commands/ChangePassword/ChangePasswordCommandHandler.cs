@@ -34,7 +34,7 @@ public class ChangePasswordCommandHandler : IRequestHandler<ChangePasswordComman
 		if (!userId.HasValue)
 		{
 			return Result.Failure(
-				Error.Create(ErrorCodes.Auth.Unauthorized, "User not authenticated."));
+				Error.Create(ErrorCodes.Auth.UnauthorizedAccess, "User not authenticated."));
 		}
 
 		var user = await _userRepository.GetByIdAsync(userId.Value, cancellationToken);

@@ -103,4 +103,32 @@ public static class EntityConstants
 		public const int SettingsMaxLength = 4000;
 		public const int TextMaxLength = -1; // nvarchar(max) / text
 	}
+
+	public static class SessionHistory
+	{
+		public const int SessionIdMaxLength = 64;
+		public const int IpAddressMaxLength = 45;
+		public const int UserAgentMaxLength = 500;
+		public const int BrowserNameMaxLength = 100;
+		public const int OperatingSystemMaxLength = 100;
+		public const int DeviceTypeMaxLength = 50;
+		public const int GeoLocationMaxLength = 200;
+		public const int CountryMaxLength = 100;
+		public const int CityMaxLength = 100;
+		public const int RevokeReasonMaxLength = 500;
+		public const int AdditionalDataMaxLength = 4000;
+	}
+
+	public static class TwoFactor
+	{
+		public const int CodeLength = 6;
+		public const int TotpSecretKeyMaxLength = 100;
+		public const int RecoveryCodesMaxLength = 2000;
+		public const int RecoveryCodeCount = 10;
+		public const int CodeExpirationMinutes = 5;
+		public const int MaxAttempts = 5;
+	}
+
+
+
 }

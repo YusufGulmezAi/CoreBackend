@@ -6,75 +6,154 @@ namespace CoreBackend.Application.Common.Interfaces;
 
 /// <summary>
 /// Genişletilmiş repository interface.
-/// Dynamic query, pagination, include desteği.
+/// Temel CRUD + Sayfalama + Dinamik sorgular.
 /// </summary>
 /// <typeparam name="TEntity">Entity tipi</typeparam>
-/// <typeparam name="TId">Primary key tipi</typeparam>
-public interface IRepositoryExtended<TEntity, TId> : IRepository<TEntity, TId>
+/// <typeparam name="TId">Id tipi</typeparam>
+public interface IRepositoryExtended<TEntity, TId>
 	where TEntity : BaseEntity<TId>
 	where TId : notnull
 {
+	#region Basic CRUD
+
 	/// <summary>
-	/// Sayfalı ve filtrelenmiş veri getirir.
+	/// Id ile entity getirir.
 	/// </summary>
-	Task<PagedResponse<TEntity>> GetPagedAsync(
-		PagedRequest request,
+	Task<TEntity?> GetByIdAsync(TId id, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Tüm entity'leri getirir.
+	/// </summary>
+	Task<IReadOnlyList<TEntity>> GetAllAsync(CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Koşula göre entity'leri getirir.
+	/// </summary>
+	Task<IReadOnlyList<TEntity>> FindAsync(
+		Expression<Func<TEntity, bool>> predicate,
 		CancellationToken cancellationToken = default);
 
 	/// <summary>
-	/// Sayfalı ve filtrelenmiş veri getirir (ek filtre ile).
+	/// Koşula göre ilk entity'yi getirir.
 	/// </summary>
-	Task<PagedResponse<TEntity>> GetPagedAsync(
-		PagedRequest request,
-		Expression<Func<TEntity, bool>>? additionalFilter,
+	Task<TEntity?> FirstOrDefaultAsync(
+		Expression<Func<TEntity, bool>> predicate,
 		CancellationToken cancellationToken = default);
 
 	/// <summary>
-	/// Dinamik sorgu ile veri getirir.
+	/// Koşula uyan kayıt var mı kontrol eder.
 	/// </summary>
-	Task<IReadOnlyList<TEntity>> GetByDynamicQueryAsync(
-		DynamicQuery query,
+	Task<bool> AnyAsync(
+		Expression<Func<TEntity, bool>> predicate,
 		CancellationToken cancellationToken = default);
 
 	/// <summary>
-	/// Include ile birlikte Id'ye göre getirir.
+	/// Koşula uyan kayıt sayısını döner.
+	/// </summary>
+	Task<int> CountAsync(
+		Expression<Func<TEntity, bool>>? predicate = null,
+		CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Entity ekler.
+	/// </summary>
+	Task<TEntity> AddAsync(TEntity entity, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Birden fazla entity ekler.
+	/// </summary>
+	Task AddRangeAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Entity günceller.
+	/// </summary>
+	void Update(TEntity entity);
+
+	/// <summary>
+	/// Birden fazla entity günceller.
+	/// </summary>
+	void UpdateRange(IEnumerable<TEntity> entities);
+
+	/// <summary>
+	/// Entity siler.
+	/// </summary>
+	void Delete(TEntity entity);
+
+	/// <summary>
+	/// Birden fazla entity siler.
+	/// </summary>
+	void DeleteRange(IEnumerable<TEntity> entities);
+
+	#endregion
+
+	#region Pagination & Dynamic Query
+
+	/// <summary>
+	/// Sayfalanmış veri getirir.
+	/// </summary>
+	Task<QueryResult<TEntity>> GetPagedAsync(
+		QueryOptions options,
+		CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Koşula göre sayfalanmış veri getirir.
+	/// </summary>
+	Task<QueryResult<TEntity>> GetPagedAsync(
+		Expression<Func<TEntity, bool>> predicate,
+		QueryOptions options,
+		CancellationToken cancellationToken = default);
+
+	#endregion
+
+	#region Include Support
+
+	/// <summary>
+	/// İlişkili entity'leri dahil ederek getirir.
 	/// </summary>
 	Task<TEntity?> GetByIdWithIncludesAsync(
 		TId id,
-		List<string>? includes = null,
-		bool asNoTracking = true,
-		CancellationToken cancellationToken = default);
+		CancellationToken cancellationToken = default,
+		params Expression<Func<TEntity, object>>[] includes);
 
 	/// <summary>
-	/// Include ile birlikte koşula göre getirir.
-	/// </summary>
-	Task<TEntity?> FirstOrDefaultWithIncludesAsync(
-		Expression<Func<TEntity, bool>> predicate,
-		List<string>? includes = null,
-		bool asNoTracking = true,
-		CancellationToken cancellationToken = default);
-
-	/// <summary>
-	/// Include ile birlikte liste getirir.
+	/// Koşula göre ilişkili entity'leri dahil ederek getirir.
 	/// </summary>
 	Task<IReadOnlyList<TEntity>> FindWithIncludesAsync(
 		Expression<Func<TEntity, bool>> predicate,
-		List<string>? includes = null,
-		List<SortDescriptor>? sorts = null,
-		bool asNoTracking = true,
-		CancellationToken cancellationToken = default);
+		CancellationToken cancellationToken = default,
+		params Expression<Func<TEntity, object>>[] includes);
+
+	#endregion
+
+	#region Ignore Filters (Admin Operations)
 
 	/// <summary>
-	/// Global filtreleri yoksayarak getirir (Admin için).
-	/// </summary>
-	Task<TEntity?> GetByIdIgnoreFiltersAsync(
-		TId id,
-		CancellationToken cancellationToken = default);
-
-	/// <summary>
-	/// Global filtreleri yoksayarak liste getirir (Admin için).
+	/// Global filtreleri yoksayarak tüm kayıtları getirir (Admin için).
 	/// </summary>
 	Task<IReadOnlyList<TEntity>> FindIgnoreFiltersAsync(
 		Expression<Func<TEntity, bool>> predicate,
 		CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Global filtreleri yoksayarak tek kayıt getirir (Admin için).
+	/// </summary>
+	Task<TEntity?> FirstOrDefaultIgnoreFiltersAsync(
+		Expression<Func<TEntity, bool>> predicate,
+		CancellationToken cancellationToken = default);
+
+	#endregion
+
+	#region Queryable
+
+	/// <summary>
+	/// IQueryable döner (karmaşık sorgular için).
+	/// </summary>
+	IQueryable<TEntity> AsQueryable();
+
+	/// <summary>
+	/// NoTracking IQueryable döner.
+	/// </summary>
+	IQueryable<TEntity> AsNoTracking();
+
+	#endregion
 }

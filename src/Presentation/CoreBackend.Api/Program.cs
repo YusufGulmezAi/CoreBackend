@@ -8,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using System.Reflection;
 using System.Text;
+using CoreBackend.Domain.Entities;
 
 
 
@@ -24,14 +25,6 @@ Log.Logger = new LoggerConfiguration()
 	.CreateLogger();
 
 builder.Host.UseSerilog();
-
-// ============================================
-// CONFIGURATION
-// ============================================
-builder.Services.Configure<JwtSettings>(
-	builder.Configuration.GetSection(JwtSettings.SectionName));
-builder.Services.Configure<SessionSettings>(
-	builder.Configuration.GetSection(SessionSettings.SectionName));
 
 // ============================================
 // APPLICATION & INFRASTRUCTURE
@@ -51,6 +44,7 @@ var jwtSettings = builder.Configuration
 	.GetSection(JwtSettings.SectionName)
 	.Get<JwtSettings>()!;
 
+// Authentication
 builder.Services.AddAuthentication(options =>
 {
 	options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -70,9 +64,39 @@ builder.Services.AddAuthentication(options =>
 			Encoding.UTF8.GetBytes(jwtSettings.SecretKey)),
 		ClockSkew = TimeSpan.Zero
 	};
+
+	options.Events = new JwtBearerEvents
+	{
+		OnAuthenticationFailed = context =>
+		{
+			if (context.Exception is SecurityTokenExpiredException)
+			{
+				context.Response.Headers.Append("X-Token-Expired", "true");
+			}
+			return Task.CompletedTask;
+		},
+		OnTokenValidated = context =>
+		{
+			// Token doðrulandýðýnda session kontrolü yapýlabilir
+			return Task.CompletedTask;
+		}
+	};
 });
 
 builder.Services.AddAuthorization();
+
+// API Versioning
+builder.Services.AddApiVersioning(options =>
+{
+	options.DefaultApiVersion = new Asp.Versioning.ApiVersion(1, 0);
+	options.AssumeDefaultVersionWhenUnspecified = true;
+	options.ReportApiVersions = true;
+})
+.AddApiExplorer(options =>
+{
+	options.GroupNameFormat = "'v'VVV";
+	options.SubstituteApiVersionInUrl = true;
+});
 
 // ============================================
 // SWAGGER
@@ -107,9 +131,6 @@ var app = builder.Build();
 // Exception Handler (en baþta olmalý)
 app.UseMiddleware<ExceptionHandlerMiddleware>();
 
-// Serilog request logging
-app.UseSerilogRequestLogging();
-
 // Swagger (Development ortamýnda)
 if (app.Environment.IsDevelopment())
 {
@@ -120,6 +141,14 @@ if (app.Environment.IsDevelopment())
 		options.RoutePrefix = "swagger";
 	});
 }
+
+// Serilog request logging
+app.UseSerilogRequestLogging(options =>
+{
+	options.MessageTemplate = "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
+});
+
+
 
 // CORS
 app.UseCors("AllowAll");

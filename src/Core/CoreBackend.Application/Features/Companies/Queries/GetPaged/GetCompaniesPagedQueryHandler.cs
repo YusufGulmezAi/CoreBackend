@@ -1,15 +1,17 @@
-﻿using MediatR;
-using CoreBackend.Application.Common.Interfaces;
+﻿using CoreBackend.Application.Common.Interfaces;
 using CoreBackend.Application.Common.Models;
 using CoreBackend.Contracts.Common;
-using CoreBackend.Contracts.Companies.Responses;
 using CoreBackend.Domain.Common.Primitives;
 using CoreBackend.Domain.Entities;
+using MediatR;
+using CompanyResponseDto = CoreBackend.Contracts.Companies.Responses.CompanyResponse;
+using PagedRequest = CoreBackend.Application.Common.Models.QueryOptions;
+using PagedResponseDto = CoreBackend.Contracts.Common.PagedResponse<CoreBackend.Contracts.Companies.Responses.CompanyResponse>;
 
 namespace CoreBackend.Application.Features.Companies.Queries.GetPaged;
 
 public class GetCompaniesPagedQueryHandler
-	: IRequestHandler<GetCompaniesPagedQuery, Result<PagedResponse<CompanyResponse>>>
+	: IRequestHandler<GetCompaniesPagedQuery, Result<PagedResponseDto>>
 {
 	private readonly IRepositoryExtended<Company, Guid> _companyRepository;
 
@@ -18,10 +20,11 @@ public class GetCompaniesPagedQueryHandler
 		_companyRepository = companyRepository;
 	}
 
-	public async Task<Result<PagedResponse<CompanyResponse>>> Handle(
+	public async Task<Result<PagedResponseDto>> Handle(
 		GetCompaniesPagedQuery request,
 		CancellationToken cancellationToken)
 	{
+		// Application'daki PagedRequest kullan
 		var pagedRequest = new PagedRequest
 		{
 			PageNumber = request.PageNumber,
@@ -36,14 +39,21 @@ public class GetCompaniesPagedQueryHandler
 			{
 				Sort = new List<SortDescriptor>
 				{
-					new() { Field = request.SortBy, Direction = request.SortDescending ? SortDirection.Descending : SortDirection.Ascending }
+					new()
+					{
+						Field = request.SortBy,
+						Direction = request.SortDescending
+							? SortDirection.Descending
+							: SortDirection.Ascending
+					}
 				}
 			};
 		}
 
 		var result = await _companyRepository.GetPagedAsync(pagedRequest, cancellationToken);
 
-		var response = new PagedResponse<CompanyResponse>
+		// Contracts'taki PagedResponse'a dönüştür
+		var response = new PagedResponseDto
 		{
 			Items = result.Items.Select(MapToResponse).ToList(),
 			PageNumber = result.PageNumber,
@@ -54,9 +64,9 @@ public class GetCompaniesPagedQueryHandler
 		return Result.Success(response);
 	}
 
-	private static CompanyResponse MapToResponse(Company company)
+	private static CompanyResponseDto MapToResponse(Company company)
 	{
-		return new CompanyResponse
+		return new CompanyResponseDto
 		{
 			Id = company.Id,
 			TenantId = company.TenantId,
@@ -67,8 +77,7 @@ public class GetCompaniesPagedQueryHandler
 			Phone = company.Phone,
 			Email = company.Email,
 			Status = company.Status.ToString(),
-			CreatedAt = company.CreatedAt,
-			UpdatedAt = company.UpdatedAt
+			CreatedAt = company.CreatedAt
 		};
 	}
 }

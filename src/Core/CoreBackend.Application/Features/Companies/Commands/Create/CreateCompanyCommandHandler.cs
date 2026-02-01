@@ -32,7 +32,7 @@ public class CreateCompanyCommandHandler : IRequestHandler<CreateCompanyCommand,
 		if (!tenantId.HasValue)
 		{
 			return Result.Failure<CompanyResponse>(
-				Error.Create(ErrorCodes.Auth.Unauthorized, "Tenant not found."));
+				Error.Create(ErrorCodes.Auth.UnauthorizedAccess, "Tenant not found."));
 		}
 
 		// Code benzersizlik kontrolü
@@ -74,8 +74,7 @@ public class CreateCompanyCommandHandler : IRequestHandler<CreateCompanyCommand,
 			Phone = company.Phone,
 			Email = company.Email,
 			Status = company.Status.ToString(),
-			CreatedAt = company.CreatedAt,
-			UpdatedAt = company.UpdatedAt
+			CreatedAt = company.CreatedAt
 		};
 	}
 }

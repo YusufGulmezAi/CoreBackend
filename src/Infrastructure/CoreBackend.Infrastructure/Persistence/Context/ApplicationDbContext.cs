@@ -33,6 +33,8 @@ public class ApplicationDbContext : DbContext
 	public DbSet<UserCompanyRole> UserCompanyRoles => Set<UserCompanyRole>();
 	public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
 	public DbSet<UserSession> UserSessions => Set<UserSession>();
+	public DbSet<SessionHistory> SessionHistories => Set<SessionHistory>();
+	public DbSet<TwoFactorCode> TwoFactorCodes => Set<TwoFactorCode>();
 
 	protected override void OnModelCreating(ModelBuilder modelBuilder)
 	{

@@ -58,8 +58,7 @@ public class UpdateCompanyCommandHandler : IRequestHandler<UpdateCompanyCommand,
 			Phone = company.Phone,
 			Email = company.Email,
 			Status = company.Status.ToString(),
-			CreatedAt = company.CreatedAt,
-			UpdatedAt = company.UpdatedAt
+			CreatedAt = company.CreatedAt
 		};
 	}
 }

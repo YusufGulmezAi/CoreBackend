@@ -75,6 +75,13 @@ public class User : TenantAuditableEntity<Guid>
 	/// </summary>
 	public DateTime? RefreshTokenExpiresAt { get; private set; }
 
+	// 2FA Alanları (mevcut alanlara ekle)
+	public bool TwoFactorEnabled { get; private set; }
+	public TwoFactorMethod TwoFactorMethod { get; private set; }
+	public string? TotpSecretKey { get; private set; }
+	public string? RecoveryCodes { get; private set; } // JSON array
+	public int RecoveryCodeCount { get; private set; }
+
 	/// <summary>
 	/// Kullanıcı ayarları (JSON formatında).
 	/// </summary>
@@ -259,8 +266,53 @@ public class User : TenantAuditableEntity<Guid>
 	public void Delete()
 	{
 		Status = UserStatus.Inactive;
-		IsDeleted = true;
-		DeletedAt = DateTime.UtcNow;
+	}
+
+	/// <summary>
+	/// Recovery kodlarını ayarlar.
+	/// </summary>
+	public void SetRecoveryCodes(string recoveryCodesJson, int count)
+	{
+		RecoveryCodes = recoveryCodesJson;
+		RecoveryCodeCount = count;
+	}
+
+	// 2FA Metodları
+	/// <summary>
+	/// 2FA'yı aktifleştirir.
+	/// </summary>
+	public void EnableTwoFactor(TwoFactorMethod method, string? totpSecretKey = null)
+	{
+		TwoFactorEnabled = true;
+		TwoFactorMethod = method;
+
+		if (method == TwoFactorMethod.Totp && !string.IsNullOrEmpty(totpSecretKey))
+		{
+			TotpSecretKey = totpSecretKey;
+		}
+	}
+
+	/// <summary>
+	/// 2FA'yı devre dışı bırakır.
+	/// </summary>
+	public void DisableTwoFactor()
+	{
+		TwoFactorEnabled = false;
+		TwoFactorMethod = TwoFactorMethod.None;
+		TotpSecretKey = null;
+		RecoveryCodes = null;
+		RecoveryCodeCount = 0;
+	}
+
+	/// <summary>
+	/// Recovery kod sayısını azaltır.
+	/// </summary>
+	public void UseRecoveryCode()
+	{
+		if (RecoveryCodeCount > 0)
+		{
+			RecoveryCodeCount--;
+		}
 	}
 
 }

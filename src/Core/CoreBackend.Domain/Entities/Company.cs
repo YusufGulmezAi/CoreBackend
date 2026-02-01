@@ -62,28 +62,39 @@ public class Company : TenantAuditableEntity<Guid>
 		Guid id,
 		Guid tenantId,
 		string name,
-		string code) : base(id, tenantId)
+		string code,
+		string? taxNumber,
+		string? address,
+		string? phone,
+		string? email) : base(id, tenantId)
 	{
 		Name = name;
 		Code = code;
+		TaxNumber = taxNumber;
+		Address = address;
+		Phone = phone;
+		Email = email;
 		Status = CompanyStatus.Active;
 	}
-
-	/// <summary>
-	/// Yeni organizasyon oluşturur.
-	/// </summary>
 	public static Company Create(
 		Guid tenantId,
 		string name,
-		string code)
+		string code,
+		string? taxNumber,
+		string? address,
+		string? phone,
+		string? email)
 	{
 		return new Company(
 			Guid.NewGuid(),
 			tenantId,
 			name,
-			code);
+			code,
+			taxNumber,
+			address,
+			phone,
+			email);
 	}
-
 	/// <summary>
 	/// Temel bilgileri günceller.
 	/// </summary>
@@ -91,25 +102,6 @@ public class Company : TenantAuditableEntity<Guid>
 	{
 		Name = name;
 		Code = code;
-	}
-
-	/// <summary>
-	/// İletişim bilgilerini günceller.
-	/// </summary>
-	public void UpdateContact(string? email, string? phone, string? address)
-	{
-		Email = email;
-		Phone = phone;
-		Address = address;
-	}
-
-	/// <summary>
-	/// Vergi bilgilerini günceller.
-	/// </summary>
-	public void UpdateTaxInfo(string? taxNumber, string? taxOffice)
-	{
-		TaxNumber = taxNumber;
-		TaxOffice = taxOffice;
 	}
 
 	/// <summary>
@@ -167,8 +159,5 @@ public class Company : TenantAuditableEntity<Guid>
 	public void Delete()
 	{
 		Status = CompanyStatus.Inactive;
-		IsDeleted = true;
-		DeletedAt = DateTime.UtcNow;
 	}
-
 }

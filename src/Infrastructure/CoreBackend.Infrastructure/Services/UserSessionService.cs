@@ -1,283 +1,252 @@
-﻿using CoreBackend.Application.Common.Interfaces;
-using CoreBackend.Domain.Errors;
+﻿using System.Text.Json;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using CoreBackend.Application.Common.Interfaces;
+using CoreBackend.Application.Common.Settings;
 
 namespace CoreBackend.Infrastructure.Services;
 
 /// <summary>
-/// User session servis implementasyonu.
-/// Redis'te session verilerini yönetir.
+/// Redis tabanlı user session servisi.
 /// </summary>
 public class UserSessionService : IUserSessionService
 {
-	private readonly ICacheService _cacheService;
+	private readonly IDistributedCache _cache;
+	private readonly SessionSettings _settings;
+	private readonly ILogger<UserSessionService> _logger;
+
 	private const string SessionPrefix = "session:";
 	private const string UserSessionsPrefix = "user_sessions:";
-	private const string TenantSessionsPrefix = "tenant_sessions:";
 
-	public UserSessionService(ICacheService cacheService)
+	public UserSessionService(
+		IDistributedCache cache,
+		IOptions<SessionSettings> settings,
+		ILogger<UserSessionService> logger)
 	{
-		_cacheService = cacheService;
+		_cache = cache;
+		_settings = settings.Value;
+		_logger = logger;
 	}
 
-	/// <summary>
-	/// Session bilgilerini cache'ten getirir.
-	/// </summary>
-	public async Task<UserSessionData?> GetSessionAsync(
-		string sessionId,
-		CancellationToken cancellationToken = default)
-	{
-		var key = $"{SessionPrefix}{sessionId}";
-		return await _cacheService.GetAsync<UserSessionData>(key, cancellationToken);
-	}
-
-	/// <summary>
-	/// Yeni session oluşturur ve cache'e kaydeder.
-	/// </summary>
 	public async Task<string> CreateSessionAsync(
 		UserSessionData sessionData,
 		CancellationToken cancellationToken = default)
 	{
 		var sessionId = Guid.NewGuid().ToString("N");
-		var expiration = sessionData.ExpiresAt - DateTime.UtcNow;
+		var sessionKey = SessionPrefix + sessionId;
+		var userSessionsKey = UserSessionsPrefix + sessionData.UserId;
 
-		// Session verisini kaydet
-		var sessionKey = $"{SessionPrefix}{sessionId}";
-		await _cacheService.SetAsync(sessionKey, sessionData, expiration, cancellationToken);
+		var json = JsonSerializer.Serialize(sessionData);
+
+		var options = new DistributedCacheEntryOptions
+		{
+			AbsoluteExpiration = sessionData.ExpiresAt
+		};
+
+		await _cache.SetStringAsync(sessionKey, json, options, cancellationToken);
 
 		// Kullanıcının session listesine ekle
-		var userSessionsKey = $"{UserSessionsPrefix}{sessionData.UserId}";
-		var userSessions = await _cacheService.GetAsync<List<string>>(userSessionsKey, cancellationToken) ?? new List<string>();
-		userSessions.Add(sessionId);
-		await _cacheService.SetAsync(userSessionsKey, userSessions, TimeSpan.FromDays(30), cancellationToken);
+		await AddSessionToUserListAsync(userSessionsKey, sessionId, sessionData.ExpiresAt, cancellationToken);
 
-		// Tenant'ın session listesine ekle
-		var tenantSessionsKey = $"{TenantSessionsPrefix}{sessionData.TenantId}";
-		var tenantSessions = await _cacheService.GetAsync<List<string>>(tenantSessionsKey, cancellationToken) ?? new List<string>();
-		tenantSessions.Add(sessionId);
-		await _cacheService.SetAsync(tenantSessionsKey, tenantSessions, TimeSpan.FromDays(30), cancellationToken);
+		_logger.LogInformation("Session created: {SessionId} for User: {UserId}", sessionId, sessionData.UserId);
 
 		return sessionId;
 	}
 
-	/// <summary>
-	/// Session bilgilerini günceller.
-	/// </summary>
+	public async Task<UserSessionData?> GetSessionAsync(
+		string sessionId,
+		CancellationToken cancellationToken = default)
+	{
+		var sessionKey = SessionPrefix + sessionId;
+		var json = await _cache.GetStringAsync(sessionKey, cancellationToken);
+
+		if (string.IsNullOrEmpty(json))
+			return null;
+
+		return JsonSerializer.Deserialize<UserSessionData>(json);
+	}
+
 	public async Task UpdateSessionAsync(
 		string sessionId,
 		UserSessionData sessionData,
 		CancellationToken cancellationToken = default)
 	{
-		var key = $"{SessionPrefix}{sessionId}";
-		var expiration = sessionData.ExpiresAt - DateTime.UtcNow;
+		var sessionKey = SessionPrefix + sessionId;
+		var json = JsonSerializer.Serialize(sessionData);
 
-		if (expiration > TimeSpan.Zero)
+		var options = new DistributedCacheEntryOptions
 		{
-			await _cacheService.SetAsync(key, sessionData, expiration, cancellationToken);
-		}
+			AbsoluteExpiration = sessionData.ExpiresAt
+		};
+
+		await _cache.SetStringAsync(sessionKey, json, options, cancellationToken);
 	}
 
-	/// <summary>
-	/// Session'ı sonlandırır (cache'ten siler).
-	/// </summary>
 	public async Task RevokeSessionAsync(
 		string sessionId,
 		CancellationToken cancellationToken = default)
 	{
-		// Session verisini al
+		var sessionKey = SessionPrefix + sessionId;
+
+		// Önce session'ı al (userId için)
 		var session = await GetSessionAsync(sessionId, cancellationToken);
 
-		// Session'ı sil
-		var sessionKey = $"{SessionPrefix}{sessionId}";
-		await _cacheService.RemoveAsync(sessionKey, cancellationToken);
+		await _cache.RemoveAsync(sessionKey, cancellationToken);
 
+		// Kullanıcının session listesinden kaldır
 		if (session != null)
 		{
-			// Kullanıcının session listesinden çıkar
-			await RemoveFromUserSessionsAsync(session.UserId, sessionId, cancellationToken);
-
-			// Tenant'ın session listesinden çıkar
-			await RemoveFromTenantSessionsAsync(session.TenantId, sessionId, cancellationToken);
+			var userSessionsKey = UserSessionsPrefix + session.UserId;
+			await RemoveSessionFromUserListAsync(userSessionsKey, sessionId, cancellationToken);
 		}
+
+		_logger.LogInformation("Session revoked: {SessionId}", sessionId);
 	}
 
-	/// <summary>
-	/// Kullanıcının tüm session'larını sonlandırır.
-	/// </summary>
 	public async Task RevokeAllUserSessionsAsync(
 		Guid userId,
 		CancellationToken cancellationToken = default)
 	{
-		var userSessionsKey = $"{UserSessionsPrefix}{userId}";
-		var sessionIds = await _cacheService.GetAsync<List<string>>(userSessionsKey, cancellationToken);
+		var userSessionsKey = UserSessionsPrefix + userId;
+		var sessionIds = await GetUserSessionIdsAsync(userSessionsKey, cancellationToken);
 
-		if (sessionIds != null)
+		foreach (var sessionId in sessionIds)
 		{
-			foreach (var sessionId in sessionIds)
-			{
-				var sessionKey = $"{SessionPrefix}{sessionId}";
-				await _cacheService.RemoveAsync(sessionKey, cancellationToken);
-			}
+			var sessionKey = SessionPrefix + sessionId;
+			await _cache.RemoveAsync(sessionKey, cancellationToken);
 		}
 
-		await _cacheService.RemoveAsync(userSessionsKey, cancellationToken);
+		// Kullanıcının session listesini temizle
+		await _cache.RemoveAsync(userSessionsKey, cancellationToken);
+
+		_logger.LogInformation("All sessions revoked for User: {UserId}, Count: {Count}", userId, sessionIds.Count);
 	}
 
-	/// <summary>
-	/// Tenant'ın tüm session'larını sonlandırır.
-	/// </summary>
-	public async Task RevokeAllTenantSessionsAsync(
-		Guid tenantId,
+	public async Task<IReadOnlyList<UserSessionData>> GetUserActiveSessionsAsync(
+		Guid userId,
 		CancellationToken cancellationToken = default)
 	{
-		var tenantSessionsKey = $"{TenantSessionsPrefix}{tenantId}";
-		var sessionIds = await _cacheService.GetAsync<List<string>>(tenantSessionsKey, cancellationToken);
+		var userSessionsKey = UserSessionsPrefix + userId;
+		var sessionIds = await GetUserSessionIdsAsync(userSessionsKey, cancellationToken);
 
-		if (sessionIds != null)
+		var sessions = new List<UserSessionData>();
+
+		foreach (var sessionId in sessionIds)
 		{
-			foreach (var sessionId in sessionIds)
+			var session = await GetSessionAsync(sessionId, cancellationToken);
+			if (session != null && session.ExpiresAt > DateTime.UtcNow)
 			{
-				var sessionKey = $"{SessionPrefix}{sessionId}";
-				await _cacheService.RemoveAsync(sessionKey, cancellationToken);
+				sessions.Add(session);
 			}
 		}
 
-		await _cacheService.RemoveAsync(tenantSessionsKey, cancellationToken);
+		return sessions;
 	}
 
-	/// <summary>
-	/// Session'ın geçerli olup olmadığını kontrol eder.
-	/// </summary>
-	public async Task<SessionValidationResult> ValidateSessionAsync(
+	public async Task<bool> ValidateSessionAsync(
 		string sessionId,
-		string currentIp,
-		string currentUserAgent,
+		string? ipAddress = null,
+		string? userAgent = null,
 		CancellationToken cancellationToken = default)
 	{
 		var session = await GetSessionAsync(sessionId, cancellationToken);
 
 		if (session == null)
-		{
-			return SessionValidationResult.Failed(
-				ErrorCodes.Auth.TokenInvalid,
-				"Session not found.");
-		}
+			return false;
 
 		// Süre kontrolü
-		if (DateTime.UtcNow > session.ExpiresAt)
+		if (session.ExpiresAt < DateTime.UtcNow)
 		{
 			await RevokeSessionAsync(sessionId, cancellationToken);
-			return SessionValidationResult.Failed(
-				ErrorCodes.Auth.TokenExpired,
-				"Session has expired.");
+			return false;
 		}
 
 		// IP kontrolü
-		if (!session.AllowIpChange && session.IpAddress != currentIp)
+		if (!session.AllowIpChange && !string.IsNullOrEmpty(ipAddress) && session.IpAddress != ipAddress)
 		{
-			return SessionValidationResult.Failed(
-				ErrorCodes.Auth.TokenInvalid,
-				"IP address mismatch.");
+			_logger.LogWarning("Session IP mismatch: {SessionId}, Expected: {Expected}, Actual: {Actual}",
+				sessionId, session.IpAddress, ipAddress);
+
+			if (!_settings.AllowIpChange)
+				return false;
 		}
 
 		// User Agent kontrolü
-		if (!session.AllowUserAgentChange && session.UserAgent != currentUserAgent)
+		if (!session.AllowUserAgentChange && !string.IsNullOrEmpty(userAgent) && session.UserAgent != userAgent)
 		{
-			return SessionValidationResult.Failed(
-				ErrorCodes.Auth.TokenInvalid,
-				"User agent mismatch.");
+			_logger.LogWarning("Session UserAgent mismatch: {SessionId}", sessionId);
+
+			if (!_settings.AllowUserAgentChange)
+				return false;
 		}
 
-		// Son aktivite güncelle
-		session.LastActivityAt = DateTime.UtcNow;
-		await UpdateSessionAsync(sessionId, session, cancellationToken);
-
-		return SessionValidationResult.Success(session);
+		return true;
 	}
 
-	/// <summary>
-	/// Kullanıcının aktif session'larını listeler.
-	/// </summary>
-	public async Task<IReadOnlyList<UserSessionData>> GetUserActiveSessionsAsync(
-		Guid userId,
-		CancellationToken cancellationToken = default)
-	{
-		var userSessionsKey = $"{UserSessionsPrefix}{userId}";
-		var sessionIds = await _cacheService.GetAsync<List<string>>(userSessionsKey, cancellationToken);
-
-		if (sessionIds == null || !sessionIds.Any())
-		{
-			return Array.Empty<UserSessionData>();
-		}
-
-		var activeSessions = new List<UserSessionData>();
-
-		foreach (var sessionId in sessionIds)
-		{
-			var session = await GetSessionAsync(sessionId, cancellationToken);
-			if (session != null && DateTime.UtcNow < session.ExpiresAt)
-			{
-				activeSessions.Add(session);
-			}
-		}
-
-		return activeSessions;
-	}
-
-	/// <summary>
-	/// Session'daki rol ve izinleri günceller.
-	/// </summary>
-	public async Task RefreshSessionPermissionsAsync(
+	public async Task RefreshSessionActivityAsync(
 		string sessionId,
 		CancellationToken cancellationToken = default)
 	{
-		// Bu metod normalde veritabanından rolleri ve izinleri çekip
-		// session'ı güncelleyecek. Şimdilik placeholder.
 		var session = await GetSessionAsync(sessionId, cancellationToken);
 
-		if (session != null)
-		{
-			// TODO: Veritabanından güncel rol ve izinleri çek
-			// session.TenantRoles = ...
-			// session.CompanyRoles = ...
-			// session.Permissions = ...
+		if (session == null)
+			return;
 
-			await UpdateSessionAsync(sessionId, session, cancellationToken);
-		}
+		session.LastActivityAt = DateTime.UtcNow;
+		await UpdateSessionAsync(sessionId, session, cancellationToken);
 	}
 
-	/// <summary>
-	/// Kullanıcının session listesinden çıkarır.
-	/// </summary>
-	private async Task RemoveFromUserSessionsAsync(
-		Guid userId,
+	#region Private Helpers
+
+	private async Task AddSessionToUserListAsync(
+		string userSessionsKey,
+		string sessionId,
+		DateTime expiresAt,
+		CancellationToken cancellationToken)
+	{
+		var sessionIds = await GetUserSessionIdsAsync(userSessionsKey, cancellationToken);
+		sessionIds.Add(sessionId);
+
+		var json = JsonSerializer.Serialize(sessionIds);
+		var options = new DistributedCacheEntryOptions
+		{
+			AbsoluteExpiration = expiresAt.AddDays(1) // Session listesi biraz daha uzun yaşasın
+		};
+
+		await _cache.SetStringAsync(userSessionsKey, json, options, cancellationToken);
+	}
+
+	private async Task RemoveSessionFromUserListAsync(
+		string userSessionsKey,
 		string sessionId,
 		CancellationToken cancellationToken)
 	{
-		var userSessionsKey = $"{UserSessionsPrefix}{userId}";
-		var sessions = await _cacheService.GetAsync<List<string>>(userSessionsKey, cancellationToken);
+		var sessionIds = await GetUserSessionIdsAsync(userSessionsKey, cancellationToken);
+		sessionIds.Remove(sessionId);
 
-		if (sessions != null)
+		if (sessionIds.Any())
 		{
-			sessions.Remove(sessionId);
-			await _cacheService.SetAsync(userSessionsKey, sessions, TimeSpan.FromDays(30), cancellationToken);
+			var json = JsonSerializer.Serialize(sessionIds);
+			await _cache.SetStringAsync(userSessionsKey, json, cancellationToken);
+		}
+		else
+		{
+			await _cache.RemoveAsync(userSessionsKey, cancellationToken);
 		}
 	}
 
-	/// <summary>
-	/// Tenant'ın session listesinden çıkarır.
-	/// </summary>
-	private async Task RemoveFromTenantSessionsAsync(
-		Guid tenantId,
-		string sessionId,
+	private async Task<List<string>> GetUserSessionIdsAsync(
+		string userSessionsKey,
 		CancellationToken cancellationToken)
 	{
-		var tenantSessionsKey = $"{TenantSessionsPrefix}{tenantId}";
-		var sessions = await _cacheService.GetAsync<List<string>>(tenantSessionsKey, cancellationToken);
+		var json = await _cache.GetStringAsync(userSessionsKey, cancellationToken);
 
-		if (sessions != null)
-		{
-			sessions.Remove(sessionId);
-			await _cacheService.SetAsync(tenantSessionsKey, sessions, TimeSpan.FromDays(30), cancellationToken);
-		}
+		if (string.IsNullOrEmpty(json))
+			return new List<string>();
+
+		return JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>();
 	}
+
+	#endregion
 }

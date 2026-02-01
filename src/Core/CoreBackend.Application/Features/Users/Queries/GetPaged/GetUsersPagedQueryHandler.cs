@@ -29,7 +29,7 @@ public class GetUsersPagedQueryHandler
 		GetUsersPagedQuery request,
 		CancellationToken cancellationToken)
 	{
-		var pagedRequest = new PagedRequest
+		var pagedRequest = new QueryOptions
 		{
 			PageNumber = request.PageNumber,
 			PageSize = request.PageSize,
