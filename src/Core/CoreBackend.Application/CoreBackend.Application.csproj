@@ -80,8 +80,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Features\Auth\Commands\RefreshToken\" />
-    <Folder Include="Features\Auth\Commands\Register\" />
     <Folder Include="Features\Auth\DTOs\" />
   </ItemGroup>
 

@@ -143,4 +143,32 @@ public class Company : TenantAuditableEntity<Guid>
 	{
 		Settings = settings;
 	}
+
+	/// <summary>
+	/// Şirketi günceller.
+	/// </summary>
+	public void Update(
+		string name,
+		string? taxNumber,
+		string? address,
+		string? phone,
+		string? email)
+	{
+		Name = name;
+		TaxNumber = taxNumber;
+		Address = address;
+		Phone = phone;
+		Email = email;
+	}
+
+	/// <summary>
+	/// Şirketi siler (soft delete).
+	/// </summary>
+	public void Delete()
+	{
+		Status = CompanyStatus.Inactive;
+		IsDeleted = true;
+		DeletedAt = DateTime.UtcNow;
+	}
+
 }

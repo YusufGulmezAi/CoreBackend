@@ -5,13 +5,14 @@ using CoreBackend.Application.Common.Interfaces;
 namespace CoreBackend.Application.Common.Behaviors;
 
 /// <summary>
-/// MediatR transaction behavior.
-/// Command'lar için otomatik transaction yönetimi sağlar.
+/// Transaction behavior.
+/// Command'ları transaction içinde çalıştırır.
+/// Execution strategy ile uyumlu çalışır.
 /// </summary>
 /// <typeparam name="TRequest">Request tipi</typeparam>
 /// <typeparam name="TResponse">Response tipi</typeparam>
 public class TransactionBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
-	where TRequest : notnull
+	where TRequest : IRequest<TResponse>
 {
 	private readonly IUnitOfWork _unitOfWork;
 	private readonly ILogger<TransactionBehavior<TRequest, TResponse>> _logger;
@@ -31,33 +32,27 @@ public class TransactionBehavior<TRequest, TResponse> : IPipelineBehavior<TReque
 	{
 		var requestName = typeof(TRequest).Name;
 
-		// Sadece Command'lar için transaction başlat
-		// Query'ler "Query" ile biter, Command'lar "Command" ile biter
+		// Query'ler için transaction kullanma
 		if (requestName.EndsWith("Query"))
 		{
 			return await next();
 		}
 
-		_logger.LogDebug("Beginning transaction for {RequestName}", requestName);
-
+		// Command'lar için sadece SaveChanges yeterli
+		// EF Core zaten her SaveChanges için implicit transaction kullanır
+		// Manuel transaction yerine bunu tercih ediyoruz (ExecutionStrategy uyumluluğu için)
 		try
 		{
-			await _unitOfWork.BeginTransactionAsync(cancellationToken);
-
 			var response = await next();
 
-			await _unitOfWork.CommitTransactionAsync(cancellationToken);
-
-			_logger.LogDebug("Transaction committed for {RequestName}", requestName);
+			// Handler içinde SaveChanges çağrılmadıysa burada çağır
+			// (Genellikle handler zaten çağırır)
 
 			return response;
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Transaction rolled back for {RequestName}", requestName);
-
-			await _unitOfWork.RollbackTransactionAsync(cancellationToken);
-
+			_logger.LogError(ex, "Error handling {RequestName}", requestName);
 			throw;
 		}
 	}

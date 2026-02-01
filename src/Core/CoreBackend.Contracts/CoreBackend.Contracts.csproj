@@ -7,12 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Companies\Responses\" />
-    <Folder Include="Companies\Requests\" />
     <Folder Include="Tenants\Responses\" />
     <Folder Include="Tenants\Requests\" />
-    <Folder Include="Users\Responses\" />
-    <Folder Include="Users\Requests\" />
   </ItemGroup>
 
 </Project>

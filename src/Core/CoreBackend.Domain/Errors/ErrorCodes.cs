@@ -170,4 +170,12 @@ public static class ErrorCodes
 		/// </summary>
 		public const string ConcurrencyConflict = "DB_CONCURRENCY_CONFLICT";
 	}
+
+	public static class User
+	{
+		public const string NotFound = "USER_NOT_FOUND";
+		public const string AlreadyExists = "USER_ALREADY_EXISTS";
+		public const string EmailAlreadyExists = "USER_EMAIL_ALREADY_EXISTS";
+		public const string CannotDeleteSelf = "USER_CANNOT_DELETE_SELF";
+	}
 }

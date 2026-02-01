@@ -244,4 +244,23 @@ public class User : TenantAuditableEntity<Guid>
 	{
 		Settings = settings;
 	}
+
+	/// <summary>
+	/// Şifre değiştirir.
+	/// </summary>
+	public void ChangePassword(string newPasswordHash)
+	{
+		PasswordHash = newPasswordHash;
+	}
+
+	/// <summary>
+	/// Kullanıcıyı siler (soft delete).
+	/// </summary>
+	public void Delete()
+	{
+		Status = UserStatus.Inactive;
+		IsDeleted = true;
+		DeletedAt = DateTime.UtcNow;
+	}
+
 }
