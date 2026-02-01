@@ -1,4 +1,4 @@
-﻿namespace CoreBackend.Api.Configurations;
+﻿namespace CoreBackend.Application.Common.Settings;
 
 /// <summary>
 /// JWT ayarları modeli.

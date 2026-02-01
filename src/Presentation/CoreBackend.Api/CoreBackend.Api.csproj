@@ -9,10 +9,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Core\CoreBackend.Application\CoreBackend.Application.csproj" />
+    <ProjectReference Include="..\..\Core\CoreBackend.Contracts\CoreBackend.Contracts.csproj" />
     <ProjectReference Include="..\..\Infrastructure\CoreBackend.Infrastructure\CoreBackend.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Configurations\" />
     <Folder Include="Middlewares\" />
   </ItemGroup>
 

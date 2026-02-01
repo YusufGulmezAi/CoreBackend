@@ -62,6 +62,13 @@ public interface IRepository<TEntity, TId>
 	Task AddRangeAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// Global filtreleri yoksayarak tek kayıt getirir (Admin için).
+	/// </summary>
+	Task<TEntity?> FirstOrDefaultIgnoreFiltersAsync(
+		Expression<Func<TEntity, bool>> predicate,
+		CancellationToken cancellationToken = default);
+
+	/// <summary>
 	/// Entity günceller.
 	/// </summary>
 	void Update(TEntity entity);

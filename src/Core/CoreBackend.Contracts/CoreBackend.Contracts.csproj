@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Folder Include="Companies\Responses\" />
+    <Folder Include="Companies\Requests\" />
+    <Folder Include="Tenants\Responses\" />
+    <Folder Include="Tenants\Requests\" />
+    <Folder Include="Users\Responses\" />
+    <Folder Include="Users\Requests\" />
+  </ItemGroup>
+
+</Project>

@@ -21,6 +21,12 @@ public static class DependencyInjection
 		this IServiceCollection services,
 		IConfiguration configuration)
 	{
+		// Password Hasher
+		services.AddScoped<IPasswordHasher, PasswordHasher>();
+
+		// JWT Service
+		services.AddScoped<IJwtService, JwtService>();
+
 		// Database
 		services.AddDatabase(configuration);
 
@@ -29,7 +35,8 @@ public static class DependencyInjection
 
 		// Repositories
 		services.AddRepositories();
-
+		// Device Info Service
+		services.AddScoped<IDeviceInfoService, DeviceInfoService>();
 		// Services
 		services.AddServices();
 
@@ -144,6 +151,12 @@ public static class DependencyInjection
 
 		// Localization Service
 		services.AddSingleton<ILocalizationService, LocalizationService>();
+
+		// Password Hasher
+		services.AddScoped<IPasswordHasher, PasswordHasher>();
+
+		// JWT Service
+		services.AddScoped<IJwtService, JwtService>();
 
 		return services;
 	}

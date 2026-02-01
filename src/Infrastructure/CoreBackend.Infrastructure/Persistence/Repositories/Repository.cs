@@ -100,6 +100,19 @@ public class Repository<TEntity, TId> : IRepository<TEntity, TId>
 	}
 
 	/// <summary>
+	/// Global filtreleri yoksayarak tek kayıt getirir (Admin için).
+	/// </summary>
+	public virtual async Task<TEntity?> FirstOrDefaultIgnoreFiltersAsync(
+		Expression<Func<TEntity, bool>> predicate,
+		CancellationToken cancellationToken = default)
+	{
+		return await DbSet
+			.IgnoreQueryFilters()
+			.AsNoTracking()
+			.FirstOrDefaultAsync(predicate, cancellationToken);
+	}
+
+	/// <summary>
 	/// Entity günceller.
 	/// </summary>
 	public virtual void Update(TEntity entity)
@@ -122,4 +135,9 @@ public class Repository<TEntity, TId> : IRepository<TEntity, TId>
 	{
 		DbSet.RemoveRange(entities);
 	}
+
+	/// <summary>
+	/// Global filtreleri yoksayarak tek kayıt getirir (Admin için).
+	/// </summary>
+	
 }

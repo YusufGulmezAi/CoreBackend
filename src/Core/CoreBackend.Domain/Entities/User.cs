@@ -116,7 +116,8 @@ public class User : TenantAuditableEntity<Guid>
 		string email,
 		string passwordHash,
 		string firstName,
-		string lastName)
+		string lastName,
+		string? phone = null)
 	{
 		return new User(
 			Guid.NewGuid(),

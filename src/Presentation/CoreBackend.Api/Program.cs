@@ -1,4 +1,4 @@
-using CoreBackend.Api.Configurations;
+using CoreBackend.Application.Common.Settings;
 using CoreBackend.Api.Extensions;
 using CoreBackend.Api.Middlewares;
 using CoreBackend.Application;
