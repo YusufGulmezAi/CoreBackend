@@ -1,0 +1,64 @@
+# Veritabançnç Sçfçrlayçp Tekrar Deneyin
+# Veritabançnç sil ve yeniden oluütur
+docker exec -it corebackend-postgres psql -U postgres -c "DROP DATABASE IF EXISTS \"CoreBackendDb\";"
+docker exec -it corebackend-postgres psql -U postgres -c "CREATE DATABASE \"CoreBackendDb\";"
+
+
+cd src/Presentation/CoreBackend.Api
+dotnet user-secrets init
+dotnet user-secrets set "SuperAdmin:Email" "admin@corebackend.com"
+dotnet user-secrets set "SuperAdmin:Password" "Admin123!@#"
+dotnet user-secrets set "SuperAdmin:Username" "superadmin"
+dotnet user-secrets set "SuperAdmin:FirstName" "System"
+dotnet user-secrets set "SuperAdmin:LastName" "Administrator"
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Port=5432;Database=CoreBackendDb;Username=postgres;Password=postgres123"
+dotnet user-secrets set "JwtSettings:SecretKey" "JZQar#1{ubz]D]XOfES^e%DR19#bv{VD+H(6=1p(<L#I##f.svoPdsn8pp+mpP#4:f0z0Lx^Xl.h8p5(qf-Ya0"
+
+
+Docker servislerini baülatmak iáin aüaßçdaki komutu kullanabilirsiniz:
+docker-compose -f docker-compose.dev.yml up -d
+
+Docker Servislerini Kontrol Et
+docker-compose -f docker-compose.dev.yml up -d
+
+PostgreSQL'in Hazçr Oldußunu Kontrol Et
+docker exec -it enterprise-postgres psql -U postgres -d enterprise_saas -c "SELECT 1"
+
+
+Servisler Baülatçldç mç?
+docker-compose -f docker-compose.dev.yml ps
+
+Docker Servislerini Durdurmak òáin
+docker-compose -f docker-compose.dev.yml down
+
+
+
+
+Migration Almak òáin
+dotnet ef migrations add AddFilteredIndexesAndHybridUoW -p src/Infrastructure/CoreBackend.Infrastructure -s src/Presentation/CoreBackend.Api -o Persistence/Migrations
+
+Update-Database Komutu
+dotnet ef database update -p src/Infrastructure/CoreBackend.Infrastructure -s src/Presentation/CoreBackend.Api
+
+
+remove migraion
+dotnet ef migrations remove -p src/Infrastructure/CoreBackend.Infrastructure -s src/Presentation/CoreBackend.Api
+
+
+Git Komutlarç
+
+cd D:\Projects\CoreBackend
+git add .
+git commit -m "Refactor: TenantId ile ilgili òliüki sorunlarç kaldçrçldç. Database silindi.Yeniden oluüturuldu."
+git push
+
+
+
+
+# User Secrets'ç baülat
+dotnet user-secrets init --project src/Presentation/CoreBackend.Api
+
+# Super Admin bilgilerini ekle
+dotnet user-secrets set "SuperAdmin:Email" "admin@corebackend.com" --project src/Presentation/CoreBackend.Api
+dotnet user-secrets set "SuperAdmin:Password" "SuperSecure123!@#" --project src/Presentation/CoreBackend.Api
+dotnet user-secrets set "SuperAdmin:Username" "superadmin" --project src/Presentation/CoreBackend.Api

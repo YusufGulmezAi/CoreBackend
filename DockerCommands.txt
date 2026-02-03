@@ -26,3 +26,22 @@ dotnet ef database update -p src/Infrastructure/CoreBackend.Infrastructure -s sr
 
 remove migraion
 dotnet ef migrations remove -p src/Infrastructure/CoreBackend.Infrastructure -s src/Presentation/CoreBackend.Api
+
+
+Git Komutlarý
+
+cd D:\Projects\CoreBackend
+git add .
+git commit -m "Refactor: TenantId ile ilgili Ýliþki sorunlarý kaldýrýldý. Database silindi.Yeniden oluþturuldu."
+git push
+
+
+
+
+# User Secrets'ý baþlat
+dotnet user-secrets init --project src/Presentation/CoreBackend.Api
+
+# Super Admin bilgilerini ekle
+dotnet user-secrets set "SuperAdmin:Email" "admin@corebackend.com" --project src/Presentation/CoreBackend.Api
+dotnet user-secrets set "SuperAdmin:Password" "SuperSecure123!@#" --project src/Presentation/CoreBackend.Api
+dotnet user-secrets set "SuperAdmin:Username" "superadmin" --project src/Presentation/CoreBackend.Api

@@ -2,6 +2,7 @@
 using CoreBackend.Application.Common.Settings;
 using CoreBackend.Infrastructure.Persistence;
 using CoreBackend.Infrastructure.Persistence.Context;
+using CoreBackend.Infrastructure.Persistence.Seeding;
 using CoreBackend.Infrastructure.Services;
 using CoreBackend.Infrastructure.Services.Caching;
 using CoreBackend.Infrastructure.Services.Localization;
@@ -25,6 +26,11 @@ public static class DependencyInjection
 		services.AddRepositories();
 		services.AddServices(configuration);
 		services.AddCaching(configuration);
+
+		// Database Seeder
+		services.Configure<SuperAdminSettings>(configuration.GetSection(SuperAdminSettings.SectionName));
+		services.AddScoped<DatabaseSeeder>();
+		services.AddHostedService<DatabaseSeederHostedService>();
 
 		return services;
 	}

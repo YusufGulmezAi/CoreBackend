@@ -1,4 +1,4 @@
-using CoreBackend.Application.Common.Settings;
+﻿using CoreBackend.Application.Common.Settings;
 using CoreBackend.Api.Extensions;
 using CoreBackend.Api.Middlewares;
 using CoreBackend.Application;
@@ -77,7 +77,7 @@ builder.Services.AddAuthentication(options =>
 		},
 		OnTokenValidated = context =>
 		{
-			// Token do�ruland���nda session kontrol� yap�labilir
+			// Token doğrulandığında session kontrolü yapılabilir
 			return Task.CompletedTask;
 		}
 	};
@@ -122,6 +122,22 @@ builder.Services.AddCors(options =>
 			  .AllowAnyHeader();
 	});
 });
+var superAdminEmail = builder.Configuration["SuperAdmin:Email"];
+var superAdminPassword = builder.Configuration["SuperAdmin:Password"];
+Console.WriteLine($"📧 SuperAdmin Email: {(string.IsNullOrEmpty(superAdminEmail) ? "❌ EMPTY" : "✅ " + superAdminEmail)}");
+Console.WriteLine($"🔐 SuperAdmin Password: {(string.IsNullOrEmpty(superAdminPassword) ? "❌ EMPTY" : "✅ CONFIGURED")}");
+var jwtSecret = builder.Configuration["JwtSettings:SecretKey"];
+Console.WriteLine($"🔑 JWT SecretKey loaded: {(string.IsNullOrEmpty(jwtSecret) ? "❌ EMPTY" : "✅ CONFIGURED")}");
+Console.WriteLine($"🔑 SecretKey length: {jwtSecret?.Length ?? 0}");
+var root = (IConfigurationRoot)builder.Configuration;
+foreach (var provider in root.Providers)
+{
+	if (provider.TryGet("JwtSettings:SecretKey", out var value))
+	{
+		Console.WriteLine($"📁 Source: {provider.GetType().Name}");
+		break;
+	}
+}
 
 var app = builder.Build();
 
@@ -129,10 +145,10 @@ var app = builder.Build();
 // MIDDLEWARE PIPELINE
 // ============================================
 
-// Exception Handler (en ba�ta olmal�)
+// Exception Handler (en başta olmalı)
 app.UseMiddleware<ExceptionHandlerMiddleware>();
 
-// Swagger (Development ortam�nda)
+// Swagger (Development ortamında)
 if (app.Environment.IsDevelopment())
 {
 	app.UseSwagger();
