@@ -11,4 +11,4 @@ public record GetUsersPagedQuery(
 	string? SearchText = null,
 	string? SortBy = null,
 	bool SortDescending = false
-) : IRequest<Result<PagedResponse<UserResponse>>>;
+) : IRequest<Result<PaginatedList<UserResponse>>>;

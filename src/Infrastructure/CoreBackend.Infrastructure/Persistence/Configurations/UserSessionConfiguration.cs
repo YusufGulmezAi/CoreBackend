@@ -1,96 +1,48 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using CoreBackend.Domain.Entities;
+using CoreBackend.Infrastructure.Persistence.Configurations.Base;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using CoreBackend.Domain.Entities;
-using CoreBackend.Domain.Constants;
 
 namespace CoreBackend.Infrastructure.Persistence.Configurations;
 
-/// <summary>
-/// UserSession entity konfigürasyonu.
-/// </summary>
 public class UserSessionConfiguration : IEntityTypeConfiguration<UserSession>
 {
 	public void Configure(EntityTypeBuilder<UserSession> builder)
 	{
-		// Tablo adı
 		builder.ToTable("UserSessions");
 
-		// Primary Key
-		builder.HasKey(us => us.Id);
+		builder.HasKey(x => x.Id);
 
-		// Properties
-		builder.Property(us => us.UserId)
-			.IsRequired();
+		builder.Property(x => x.RefreshToken)
+			.HasMaxLength(500);
 
-		builder.Property(us => us.SessionId)
-			.IsRequired()
-			.HasMaxLength(EntityConstants.UserSession.SessionIdMaxLength);
+		builder.Property(x => x.IpAddress)
+			.HasMaxLength(45);
 
-		builder.Property(us => us.RefreshToken)
-			.HasMaxLength(EntityConstants.UserSession.RefreshTokenMaxLength);
-
-		builder.Property(us => us.IpAddress)
-			.IsRequired()
-			.HasMaxLength(EntityConstants.UserSession.IpAddressMaxLength);
-
-		builder.Property(us => us.UserAgent)
-			.IsRequired()
-			.HasMaxLength(EntityConstants.UserSession.UserAgentMaxLength);
-
-		builder.Property(us => us.GeoLocation)
-			.HasMaxLength(EntityConstants.UserSession.GeoLocationMaxLength);
-
-		builder.Property(us => us.BrowserName)
-			.HasMaxLength(EntityConstants.UserSession.BrowserNameMaxLength);
-
-		builder.Property(us => us.OperatingSystem)
-			.HasMaxLength(EntityConstants.UserSession.OperatingSystemMaxLength);
-
-		builder.Property(us => us.DeviceType)
-			.HasMaxLength(EntityConstants.UserSession.DeviceTypeMaxLength);
-
-		builder.Property(us => us.StartedAt)
-			.IsRequired();
-
-		builder.Property(us => us.ExpiresAt)
-			.IsRequired();
-
-		builder.Property(us => us.LastActivityAt)
-			.IsRequired();
-
-		builder.Property(us => us.IsRevoked)
-			.IsRequired();
-
-		builder.Property(us => us.RevokedReason)
-			.HasMaxLength(EntityConstants.UserSession.RevokedReasonMaxLength);
-
-		builder.Property(us => us.AllowIpChange)
-			.IsRequired();
-
-		builder.Property(us => us.AllowUserAgentChange)
-			.IsRequired();
+		builder.Property(x => x.UserAgent)
+			.HasMaxLength(500);
 
 		// Indexes
-		builder.HasIndex(us => us.SessionId)
-			.IsUnique();
+		builder.HasIndex(x => x.TenantId)
+			.HasDatabaseName("IX_UserSessions_TenantId");
 
-		builder.HasIndex(us => us.TenantId);
+		builder.HasIndex(x => x.UserId)
+			.HasDatabaseName("IX_UserSessions_UserId");
 
-		builder.HasIndex(us => us.UserId);
+		// IsActive method olduğu için IsRevoked kullanılıyor
+		builder.HasIndex(x => new { x.UserId, x.IsRevoked })
+			.HasDatabaseName("IX_UserSessions_UserId_IsRevoked");
 
-		builder.HasIndex(us => us.IsRevoked);
-
-		builder.HasIndex(us => us.ExpiresAt);
-
-		// Relationships
-		builder.HasOne<Tenant>()
-			.WithMany()
-			.HasForeignKey(us => us.TenantId)
+		// Relationships - Tenant hariç
+		builder.HasOne(t=>t.Tenant)
+			.WithMany(t=> t.UserSessions)
+			.HasForeignKey(x => x.TenantId)
 			.OnDelete(DeleteBehavior.Restrict);
 
+		// User navigation property entity'de tanımlı olmadığı için generic syntax kullanılıyor
 		builder.HasOne<User>()
 			.WithMany()
-			.HasForeignKey(us => us.UserId)
+			.HasForeignKey(x => x.UserId)
 			.OnDelete(DeleteBehavior.Cascade);
 	}
 }

@@ -59,7 +59,7 @@ public class SessionHistoryConfiguration : IEntityTypeConfiguration<SessionHisto
 		builder.HasIndex(x => new { x.TenantId, x.CreatedAt });
 		builder.HasIndex(x => new { x.UserId, x.CreatedAt });
 
-		// Relationships
+		// Relationships - Navigation property kullanarak tanımla
 		builder.HasOne(x => x.Tenant)
 			.WithMany()
 			.HasForeignKey(x => x.TenantId)

@@ -33,7 +33,7 @@ public class LogoutCommandHandler : IRequestHandler<LogoutCommand, Result>
 
 		if (string.IsNullOrEmpty(sessionId) || !userId.HasValue || !tenantId.HasValue)
 		{
-			return Result.Failure(Error.Create(ErrorCodes.Auth.UnauthorizedAccess, "Not authenticated."));
+			return Result.Failure(Error.Create(ErrorCodes.Auth.Unauthorized, "Not authenticated."));
 		}
 
 		// Session'ı iptal et

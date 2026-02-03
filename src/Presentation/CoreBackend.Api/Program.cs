@@ -85,18 +85,19 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-// API Versioning
-builder.Services.AddApiVersioning(options =>
-{
-	options.DefaultApiVersion = new Asp.Versioning.ApiVersion(1, 0);
-	options.AssumeDefaultVersionWhenUnspecified = true;
-	options.ReportApiVersions = true;
-})
-.AddApiExplorer(options =>
-{
-	options.GroupNameFormat = "'v'VVV";
-	options.SubstituteApiVersionInUrl = true;
-});
+////API Versioning
+////builder.Services.AddApiVersioning(options =>
+////{
+////	options.DefaultApiVersion = new Asp.Versioning.ApiVersion(1, 0);
+////options.AssumeDefaultVersionWhenUnspecified = true;
+////options.ReportApiVersions = true;
+////})
+////.AddMvc()
+////.AddApiExplorer(options =>
+////{
+////	options.GroupNameFormat = "'v'VVV";
+////	options.SubstituteApiVersionInUrl = true;
+////});
 
 // ============================================
 // SWAGGER

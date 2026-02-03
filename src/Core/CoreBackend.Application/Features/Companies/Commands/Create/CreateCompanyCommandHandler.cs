@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using Microsoft.EntityFrameworkCore;
 using CoreBackend.Application.Common.Interfaces;
 using CoreBackend.Contracts.Companies.Responses;
 using CoreBackend.Domain.Common.Primitives;
@@ -9,18 +10,15 @@ namespace CoreBackend.Application.Features.Companies.Commands.Create;
 
 public class CreateCompanyCommandHandler : IRequestHandler<CreateCompanyCommand, Result<CompanyResponse>>
 {
-	private readonly IRepositoryExtended<Company, Guid> _companyRepository;
-	private readonly ICurrentUserService _currentUserService;
 	private readonly IUnitOfWork _unitOfWork;
+	private readonly ICurrentUserService _currentUserService;
 
 	public CreateCompanyCommandHandler(
-		IRepositoryExtended<Company, Guid> companyRepository,
-		ICurrentUserService currentUserService,
-		IUnitOfWork unitOfWork)
+		IUnitOfWork unitOfWork,
+		ICurrentUserService currentUserService)
 	{
-		_companyRepository = companyRepository;
-		_currentUserService = currentUserService;
 		_unitOfWork = unitOfWork;
+		_currentUserService = currentUserService;
 	}
 
 	public async Task<Result<CompanyResponse>> Handle(
@@ -32,13 +30,13 @@ public class CreateCompanyCommandHandler : IRequestHandler<CreateCompanyCommand,
 		if (!tenantId.HasValue)
 		{
 			return Result.Failure<CompanyResponse>(
-				Error.Create(ErrorCodes.Auth.UnauthorizedAccess, "Tenant not found."));
+				Error.Create(ErrorCodes.Auth.Unauthorized, "Tenant not found."));
 		}
 
 		// Code benzersizlik kontrolü
-		var existingCompany = await _companyRepository.FirstOrDefaultAsync(
-			c => c.Code == request.Code,
-			cancellationToken);
+		var existingCompany = await _unitOfWork.Companies
+			.AsNoTracking()
+			.FirstOrDefaultAsync(c => c.Code == request.Code, cancellationToken);
 
 		if (existingCompany != null)
 		{
@@ -55,7 +53,7 @@ public class CreateCompanyCommandHandler : IRequestHandler<CreateCompanyCommand,
 			request.Phone,
 			request.Email);
 
-		await _companyRepository.AddAsync(company, cancellationToken);
+		await _unitOfWork.Companies.AddAsync(company, cancellationToken);
 		await _unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return Result.Success(MapToResponse(company));
@@ -74,7 +72,8 @@ public class CreateCompanyCommandHandler : IRequestHandler<CreateCompanyCommand,
 			Phone = company.Phone,
 			Email = company.Email,
 			Status = company.Status.ToString(),
-			CreatedAt = company.CreatedAt
+			CreatedAt = company.CreatedAt,
+			UpdatedAt = company.UpdatedAt
 		};
 	}
 }

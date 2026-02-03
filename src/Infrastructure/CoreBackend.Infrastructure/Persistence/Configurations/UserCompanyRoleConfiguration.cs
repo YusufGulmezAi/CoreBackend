@@ -4,63 +4,50 @@ using CoreBackend.Domain.Entities;
 
 namespace CoreBackend.Infrastructure.Persistence.Configurations;
 
-/// <summary>
-/// UserCompanyRole entity konfigürasyonu.
-/// </summary>
 public class UserCompanyRoleConfiguration : IEntityTypeConfiguration<UserCompanyRole>
 {
 	public void Configure(EntityTypeBuilder<UserCompanyRole> builder)
 	{
-		// Tablo adı
 		builder.ToTable("UserCompanyRoles");
 
-		// Primary Key
-		builder.HasKey(ucr => ucr.Id);
+		builder.HasKey(x => x.Id);
 
-		// Properties
-		builder.Property(ucr => ucr.UserId)
-			.IsRequired();
+		// Soft Delete Query Filter
+		builder.HasQueryFilter(x => !x.IsDeleted);
 
-		builder.Property(ucr => ucr.RoleId)
-			.IsRequired();
+		// Filtered Indexes
+		builder.HasIndex(x => x.TenantId)
+			.HasFilter("\"IsDeleted\" = false")
+			.HasDatabaseName("IX_UserCompanyRoles_TenantId_Active");
 
-		builder.Property(ucr => ucr.AssignedAt)
-			.IsRequired();
+		builder.HasIndex(x => new { x.TenantId, x.UserId, x.CompanyId, x.RoleId })
+			.IsUnique()
+			.HasFilter("\"IsDeleted\" = false")
+			.HasDatabaseName("IX_UserCompanyRoles_Unique_Active");
 
-		builder.Property(ucr => ucr.IsActive)
-			.IsRequired();
+		builder.HasIndex(x => new { x.TenantId, x.UserId, x.CompanyId })
+			.HasFilter("\"IsDeleted\" = false AND \"IsActive\" = true")
+			.HasDatabaseName("IX_UserCompanyRoles_UserId_CompanyId_Active");
 
-		// Indexes
-		builder.HasIndex(ucr => new { ucr.UserId, ucr.CompanyId, ucr.RoleId })
-			.IsUnique();
-
-		builder.HasIndex(ucr => ucr.TenantId);
-
-		builder.HasIndex(ucr => ucr.CompanyId);
-
-		builder.HasIndex(ucr => ucr.UserId);
-
-		builder.HasIndex(ucr => ucr.RoleId);
-
-		// Relationships
-		builder.HasOne<Tenant>()
+		// Relationships - Navigation property ile tanımla
+		builder.HasOne(x => x.Tenant)
 			.WithMany()
-			.HasForeignKey(ucr => ucr.TenantId)
+			.HasForeignKey(x => x.TenantId)
 			.OnDelete(DeleteBehavior.Restrict);
 
-		builder.HasOne<Company>()
-			.WithMany()
-			.HasForeignKey(ucr => ucr.CompanyId)
+		builder.HasOne(x => x.User)
+			.WithMany(u => u.UserCompanyRoles)
+			.HasForeignKey(x => x.UserId)
 			.OnDelete(DeleteBehavior.Cascade);
 
-		builder.HasOne<User>()
-			.WithMany()
-			.HasForeignKey(ucr => ucr.UserId)
+		builder.HasOne(x => x.Company)
+			.WithMany(c => c.UserCompanyRoles)
+			.HasForeignKey(x => x.CompanyId)
 			.OnDelete(DeleteBehavior.Cascade);
 
-		builder.HasOne<Role>()
+		builder.HasOne(x => x.Role)
 			.WithMany()
-			.HasForeignKey(ucr => ucr.RoleId)
+			.HasForeignKey(x => x.RoleId)
 			.OnDelete(DeleteBehavior.Cascade);
 	}
 }

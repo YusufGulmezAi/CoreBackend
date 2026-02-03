@@ -36,6 +36,11 @@ public class Permission : AuditableEntity<Guid>
 	/// </summary>
 	public bool IsActive { get; private set; }
 
+	/// <summary>
+	/// Rol-Permission ilişkileri.
+	/// </summary>
+	public virtual ICollection<RolePermission> RolePermissions { get; private set; } = new List<RolePermission>();
+
 	// EF Core için private constructor
 	private Permission() : base() { }
 

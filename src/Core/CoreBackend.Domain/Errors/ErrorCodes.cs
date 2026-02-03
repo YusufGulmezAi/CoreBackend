@@ -63,6 +63,11 @@ public static class ErrorCodes
 		public const string UserLocked = "AUTH_USER_LOCKED";
 
 		/// <summary>
+		/// Kullanıcı hesabı pasif durumda.
+		/// </summary>
+		public const string UserInactive = "AUTH_USER_INACTIVE";
+
+		/// <summary>
 		/// Token süresi dolmuş. Yeniden giriş yapılmalı.
 		/// </summary>
 		public const string TokenExpired = "AUTH_TOKEN_EXPIRED";
@@ -75,12 +80,27 @@ public static class ErrorCodes
 		/// <summary>
 		/// Yetkisiz erişim. Giriş yapılmamış.
 		/// </summary>
-		public const string UnauthorizedAccess = "AUTH_UNAUTHORIZED_ACCESS";
+		public const string Unauthorized = "AUTH_UNAUTHORIZED_ACCESS";
 
 		/// <summary>
 		/// Yasaklı erişim. Bu kaynağa erişim izniniz yok.
 		/// </summary>
 		public const string ForbiddenAccess = "AUTH_FORBIDDEN_ACCESS";
+
+		/// <summary>
+		/// Session süresi dolmuş.
+		/// </summary>
+		public const string SessionExpired = "AUTH_SESSION_EXPIRED";
+
+		/// <summary>
+		/// Refresh token geçersiz.
+		/// </summary>
+		public const string RefreshTokenInvalid = "AUTH_REFRESH_TOKEN_INVALID";
+
+		/// <summary>
+		/// Refresh token süresi dolmuş.
+		/// </summary>
+		public const string RefreshTokenExpired = "AUTH_REFRESH_TOKEN_EXPIRED";
 	}
 
 	/// <summary>

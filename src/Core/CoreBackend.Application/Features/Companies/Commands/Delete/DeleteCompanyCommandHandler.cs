@@ -1,21 +1,17 @@
 ﻿using MediatR;
+using Microsoft.EntityFrameworkCore;
 using CoreBackend.Application.Common.Interfaces;
 using CoreBackend.Domain.Common.Primitives;
-using CoreBackend.Domain.Entities;
 using CoreBackend.Domain.Errors;
 
 namespace CoreBackend.Application.Features.Companies.Commands.Delete;
 
 public class DeleteCompanyCommandHandler : IRequestHandler<DeleteCompanyCommand, Result>
 {
-	private readonly IRepositoryExtended<Company, Guid> _companyRepository;
 	private readonly IUnitOfWork _unitOfWork;
 
-	public DeleteCompanyCommandHandler(
-		IRepositoryExtended<Company, Guid> companyRepository,
-		IUnitOfWork unitOfWork)
+	public DeleteCompanyCommandHandler(IUnitOfWork unitOfWork)
 	{
-		_companyRepository = companyRepository;
 		_unitOfWork = unitOfWork;
 	}
 
@@ -23,7 +19,8 @@ public class DeleteCompanyCommandHandler : IRequestHandler<DeleteCompanyCommand,
 		DeleteCompanyCommand request,
 		CancellationToken cancellationToken)
 	{
-		var company = await _companyRepository.GetByIdAsync(request.Id, cancellationToken);
+		var company = await _unitOfWork.Companies
+			.FirstOrDefaultAsync(c => c.Id == request.Id, cancellationToken);
 
 		if (company == null)
 		{
@@ -32,7 +29,6 @@ public class DeleteCompanyCommandHandler : IRequestHandler<DeleteCompanyCommand,
 		}
 
 		company.Delete();
-		_companyRepository.Update(company);
 		await _unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return Result.Success();

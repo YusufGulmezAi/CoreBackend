@@ -1,56 +1,47 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Builders;
+﻿using CoreBackend.Domain.Constants;
 using CoreBackend.Domain.Entities;
-using CoreBackend.Domain.Constants;
+using CoreBackend.Infrastructure.Persistence.Configurations.Base;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace CoreBackend.Infrastructure.Persistence.Configurations;
 
-/// <summary>
-/// Role entity konfigürasyonu.
-/// </summary>
-public class RoleConfiguration : IEntityTypeConfiguration<Role>
+public class RoleConfiguration : TenantEntityConfiguration<Role>
 {
 	public void Configure(EntityTypeBuilder<Role> builder)
 	{
-		// Tablo adı
 		builder.ToTable("Roles");
 
-		// Primary Key
-		builder.HasKey(r => r.Id);
+		builder.HasKey(x => x.Id);
 
-		// Properties
-		builder.Property(r => r.Name)
+		// Soft Delete Query Filter
+		builder.HasQueryFilter(x => !x.IsDeleted);
+
+		builder.Property(x => x.Name)
 			.IsRequired()
 			.HasMaxLength(EntityConstants.Role.NameMaxLength);
 
-		builder.Property(r => r.Code)
+		builder.Property(x => x.Code)
 			.IsRequired()
 			.HasMaxLength(EntityConstants.Role.CodeMaxLength);
 
-		builder.Property(r => r.Description)
+		builder.Property(x => x.Description)
 			.HasMaxLength(EntityConstants.Role.DescriptionMaxLength);
 
-		builder.Property(r => r.Level)
-			.IsRequired();
+		// Filtered Indexes
+		builder.HasIndex(x => x.TenantId)
+			.HasFilter("\"IsDeleted\" = false")
+			.HasDatabaseName("IX_Roles_TenantId_Active");
 
-		builder.Property(r => r.IsSystemRole)
-			.IsRequired();
+		builder.HasIndex(x => new { x.TenantId, x.Code })
+			.IsUnique()
+			.HasFilter("\"IsDeleted\" = false")
+			.HasDatabaseName("IX_Roles_TenantId_Code_Unique_Active");
 
-		builder.Property(r => r.IsActive)
-			.IsRequired();
+		builder.HasIndex(x => new { x.TenantId, x.Level })
+			.HasFilter("\"IsDeleted\" = false AND \"IsActive\" = true")
+			.HasDatabaseName("IX_Roles_TenantId_Level_Active");
 
-		// Indexes
-		builder.HasIndex(r => new { r.TenantId, r.Code })
-			.IsUnique();
-
-		builder.HasIndex(r => r.TenantId);
-
-		builder.HasIndex(r => r.Level);
-
-		// Relationships
-		builder.HasOne<Tenant>()
-			.WithMany()
-			.HasForeignKey(r => r.TenantId)
-			.OnDelete(DeleteBehavior.Restrict);
+		// NOT: Tenant relationship TenantConfiguration'da tanımlı
 	}
 }

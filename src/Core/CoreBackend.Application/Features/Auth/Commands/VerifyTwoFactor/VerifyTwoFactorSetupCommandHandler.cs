@@ -7,26 +7,27 @@ using CoreBackend.Domain.Constants;
 using CoreBackend.Domain.Entities;
 using CoreBackend.Domain.Enums;
 using CoreBackend.Domain.Errors;
+using Microsoft.EntityFrameworkCore;
 
 namespace CoreBackend.Application.Features.Auth.Commands.VerifyTwoFactorSetup;
 
 public class VerifyTwoFactorSetupCommandHandler : IRequestHandler<VerifyTwoFactorSetupCommand, Result<TwoFactorSetupResponse>>
 {
-	private readonly IRepositoryExtended<User, Guid> _userRepository;
-	private readonly IRepositoryExtended<TwoFactorCode, Guid> _twoFactorCodeRepository;
+	//private readonly IRepositoryExtended<User, Guid> _userRepository;
+	//private readonly IRepositoryExtended<TwoFactorCode, Guid> _twoFactorCodeRepository;
 	private readonly ICurrentUserService _currentUserService;
 	private readonly ITotpService _totpService;
 	private readonly IUnitOfWork _unitOfWork;
 
 	public VerifyTwoFactorSetupCommandHandler(
-		IRepositoryExtended<User, Guid> userRepository,
-		IRepositoryExtended<TwoFactorCode, Guid> twoFactorCodeRepository,
+		//IRepositoryExtended<User, Guid> userRepository,
+		//IRepositoryExtended<TwoFactorCode, Guid> twoFactorCodeRepository,
 		ICurrentUserService currentUserService,
 		ITotpService totpService,
 		IUnitOfWork unitOfWork)
 	{
-		_userRepository = userRepository;
-		_twoFactorCodeRepository = twoFactorCodeRepository;
+		//_userRepository = userRepository;
+		//_twoFactorCodeRepository = twoFactorCodeRepository;
 		_currentUserService = currentUserService;
 		_totpService = totpService;
 		_unitOfWork = unitOfWork;
@@ -42,10 +43,10 @@ public class VerifyTwoFactorSetupCommandHandler : IRequestHandler<VerifyTwoFacto
 		if (!userId.HasValue || !tenantId.HasValue)
 		{
 			return Result.Failure<TwoFactorSetupResponse>(
-				Error.Create(ErrorCodes.Auth.UnauthorizedAccess, "Not authenticated."));
+				Error.Create(ErrorCodes.Auth.Unauthorized, "Not authenticated."));
 		}
 
-		var user = await _userRepository.GetByIdAsync(userId.Value, cancellationToken);
+		var user = await _unitOfWork.Users.FindAsync(userId.Value, cancellationToken);
 		if (user == null)
 		{
 			return Result.Failure<TwoFactorSetupResponse>(
@@ -67,7 +68,7 @@ public class VerifyTwoFactorSetupCommandHandler : IRequestHandler<VerifyTwoFacto
 
 			case TwoFactorMethod.Email:
 			case TwoFactorMethod.Sms:
-				var twoFactorCode = await _twoFactorCodeRepository.FirstOrDefaultAsync(
+				var twoFactorCode = await _unitOfWork.TwoFactorCodes.FirstOrDefaultAsync(
 					c => c.UserId == userId.Value && c.Method == request.Method && !c.IsUsed && c.ExpiresAt > DateTime.UtcNow,
 					cancellationToken);
 
@@ -78,7 +79,7 @@ public class VerifyTwoFactorSetupCommandHandler : IRequestHandler<VerifyTwoFacto
 				}
 
 				isValid = twoFactorCode.Verify(request.Code);
-				_twoFactorCodeRepository.Update(twoFactorCode);
+				_unitOfWork.TwoFactorCodes.Update(twoFactorCode);
 				break;
 		}
 
@@ -94,8 +95,7 @@ public class VerifyTwoFactorSetupCommandHandler : IRequestHandler<VerifyTwoFacto
 		// Recovery kodları oluştur
 		var recoveryCodes = GenerateRecoveryCodes(EntityConstants.TwoFactor.RecoveryCodeCount);
 		user.SetRecoveryCodes(JsonSerializer.Serialize(recoveryCodes), recoveryCodes.Count);
-
-		_userRepository.Update(user);
+		_unitOfWork.Users.Update(user);
 		await _unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return Result.Success(new TwoFactorSetupResponse

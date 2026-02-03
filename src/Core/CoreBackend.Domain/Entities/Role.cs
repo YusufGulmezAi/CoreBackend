@@ -47,6 +47,16 @@ public class Role : TenantAuditableEntity<Guid>
 	/// </summary>
 	public bool IsActive { get; private set; }
 
+	/// <summary>
+	/// Kullanıcı-Rol ilişkileri.
+	/// </summary>
+	public virtual ICollection<UserRole> UserRoles { get; private set; } = new List<UserRole>();
+
+	/// <summary>
+	/// Rol-Permission ilişkileri.
+	/// </summary>
+	public virtual ICollection<RolePermission> RolePermissions { get; private set; } = new List<RolePermission>();
+
 	// EF Core için private constructor
 	private Role() : base() { }
 

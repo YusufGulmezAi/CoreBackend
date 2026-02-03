@@ -1,53 +1,49 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using CoreBackend.Domain.Entities;
+using CoreBackend.Infrastructure.Persistence.Configurations.Base;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using CoreBackend.Domain.Entities;
 
 namespace CoreBackend.Infrastructure.Persistence.Configurations;
 
-/// <summary>
-/// RolePermission entity konfigürasyonu.
-/// </summary>
-public class RolePermissionConfiguration : IEntityTypeConfiguration<RolePermission>
+public class RolePermissionConfiguration : TenantEntityConfiguration<RolePermission>
 {
 	public void Configure(EntityTypeBuilder<RolePermission> builder)
 	{
-		// Tablo adı
 		builder.ToTable("RolePermissions");
 
-		// Primary Key
-		builder.HasKey(rp => rp.Id);
+		builder.HasKey(x => x.Id);
 
-		// Properties
-		builder.Property(rp => rp.RoleId)
-			.IsRequired();
+		// Soft Delete Query Filter
+		builder.HasQueryFilter(x => !x.IsDeleted);
 
-		builder.Property(rp => rp.PermissionId)
-			.IsRequired();
+		// Filtered Indexes
+		builder.HasIndex(x => x.TenantId)
+			.HasFilter("\"IsDeleted\" = false")
+			.HasDatabaseName("IX_RolePermissions_TenantId_Active");
 
-		// Indexes
-		builder.HasIndex(rp => new { rp.RoleId, rp.PermissionId })
-			.IsUnique();
+		builder.HasIndex(x => new { x.TenantId, x.RoleId, x.PermissionId })
+			.IsUnique()
+			.HasFilter("\"IsDeleted\" = false")
+			.HasDatabaseName("IX_RolePermissions_Unique_Active");
 
-		builder.HasIndex(rp => rp.TenantId);
+		builder.HasIndex(x => new { x.TenantId, x.RoleId })
+			.HasFilter("\"IsDeleted\" = false")
+			.HasDatabaseName("IX_RolePermissions_RoleId_Active");
 
-		builder.HasIndex(rp => rp.RoleId);
-
-		builder.HasIndex(rp => rp.PermissionId);
-
-		// Relationships
+		// Relationships - Tenant hariç
 		builder.HasOne<Tenant>()
 			.WithMany()
-			.HasForeignKey(rp => rp.TenantId)
+			.HasForeignKey(x => x.TenantId)
 			.OnDelete(DeleteBehavior.Restrict);
 
-		builder.HasOne<Role>()
-			.WithMany()
-			.HasForeignKey(rp => rp.RoleId)
+		builder.HasOne(x => x.Role)
+			.WithMany(r => r.RolePermissions)
+			.HasForeignKey(x => x.RoleId)
 			.OnDelete(DeleteBehavior.Cascade);
 
-		builder.HasOne<Permission>()
-			.WithMany()
-			.HasForeignKey(rp => rp.PermissionId)
+		builder.HasOne(x => x.Permission)
+			.WithMany(p => p.RolePermissions)
+			.HasForeignKey(x => x.PermissionId)
 			.OnDelete(DeleteBehavior.Cascade);
 	}
 }

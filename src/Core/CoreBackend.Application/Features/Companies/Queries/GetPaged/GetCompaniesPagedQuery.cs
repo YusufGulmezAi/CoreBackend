@@ -11,4 +11,4 @@ public record GetCompaniesPagedQuery(
 	string? SearchText = null,
 	string? SortBy = null,
 	bool SortDescending = false
-) : IRequest<Result<PagedResponse<CompanyResponse>>>;
+) : IRequest<Result<PaginatedList<CompanyResponse>>>;

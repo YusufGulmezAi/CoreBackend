@@ -14,10 +14,18 @@ public class RolePermission : TenantAuditableEntity<Guid>
 	public Guid RoleId { get; private set; }
 
 	/// <summary>
+	/// Rol.
+	/// </summary>
+	public Role Role { get; private set; } = null!;
+	/// <summary>
 	/// İzin Id.
 	/// </summary>
 	public Guid PermissionId { get; private set; }
 
+	/// <summary>
+	/// İzinler
+	/// </summary>
+	public Permission Permission { get; private set; } = null!;
 	// EF Core için private constructor
 	private RolePermission() : base() { }
 

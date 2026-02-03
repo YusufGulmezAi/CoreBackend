@@ -46,6 +46,21 @@ public class Tenant : AuditableEntity<Guid>
 	public int MaxCompanyCount { get; private set; }
 
 	/// <summary>
+	/// Alt organizasyonlar için kullanılacak subdomain. Örnek: tenant1.example.com, tenant2.example.com
+	/// </summary>
+	public string Subdomain { get; set; }
+
+	/// <summary>
+	/// İletişim emaili. Destek veya faturalandırma gibi konularda kullanılabilir.
+	/// </summary>
+	public string ContactEmail { get; set; }
+
+	/// <summary>
+	/// İletişim telefonu. Destek veya faturalandırma gibi konularda kullanılabilir.
+	/// </summary>
+	public string ContactPhone { get; set; }
+
+	/// <summary>
 	/// Tenant ayarları (JSON formatında).
 	/// </summary>
 	public string? Settings { get; private set; }
@@ -64,8 +79,27 @@ public class Tenant : AuditableEntity<Guid>
 	/// </summary>
 	/// <remarks>Koleksiyon, kullanıcının kimlik doğrulama için seçebileceği veya kullanabileceği tüm mevcut iki faktörlü yöntemleri içerir.
 	/// Liste salt okunurdur ve hiçbir yönteme izin verilmiyorsa boş olacaktır.</remarks>
-	public List<TwoFactorMethod> AllowedTwoFactorMethods { get; private set; } = new();
+	public virtual ICollection<TwoFactorMethod> AllowedTwoFactorMethods { get; private set; } = new List<TwoFactorMethod>();
 
+	/// <summary>
+	/// Kullanıcı-Tenant ilişkileri.
+	/// </summary>
+	public virtual ICollection<User> Users { get; private set; } = new List<User>();
+
+	/// <summary>
+	/// Şirketler (alt organizasyonlar).
+	/// </summary>
+	public virtual ICollection<Company> Companies { get; private set; } = new List<Company>();
+
+	/// <summary>
+	/// Roller.
+	/// </summary>
+	public virtual ICollection<Role> Roles { get; private set; } = new List<Role>();
+
+	/// <summary>
+	/// Kullanıcı oturumları.
+	/// </summary>
+	public virtual ICollection<UserSession> UserSessions { get; private set; } = new List<UserSession>();
 
 	// EF Core için private constructor
 	private Tenant() : base() { }

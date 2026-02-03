@@ -1,90 +1,63 @@
 ﻿using MediatR;
+using Microsoft.EntityFrameworkCore;
 using CoreBackend.Application.Common.Interfaces;
 using CoreBackend.Contracts.Auth.Responses;
 using CoreBackend.Domain.Common.Primitives;
-using CoreBackend.Domain.Entities;
-using CoreBackend.Domain.Errors;
 using CoreBackend.Domain.Enums;
+using CoreBackend.Domain.Errors;
 
 namespace CoreBackend.Application.Features.Auth.Commands.Login;
 
-/// <summary>
-/// Login command handler.
-/// </summary>
 public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<AuthResponse>>
 {
-	private readonly IRepositoryExtended<User, Guid> _userRepository;
-	private readonly IRepositoryExtended<Company, Guid> _companyRepository;
-	private readonly IRepositoryExtended<UserRole, Guid> _userRoleRepository;
-	private readonly IRepositoryExtended<UserCompanyRole, Guid> _userCompanyRoleRepository;
-	private readonly IRepositoryExtended<Role, Guid> _roleRepository;
+	private readonly IUnitOfWork _unitOfWork;
 	private readonly IPasswordHasher _passwordHasher;
 	private readonly IJwtService _jwtService;
 	private readonly IUserSessionService _sessionService;
 	private readonly IDeviceInfoService _deviceInfoService;
-	private readonly IUnitOfWork _unitOfWork;
 
 	public LoginCommandHandler(
-		IRepositoryExtended<User, Guid> userRepository,
-		IRepositoryExtended<Company, Guid> companyRepository,
-		IRepositoryExtended<UserRole, Guid> userRoleRepository,
-		IRepositoryExtended<UserCompanyRole, Guid> userCompanyRoleRepository,
-		IRepositoryExtended<Role, Guid> roleRepository,
+		IUnitOfWork unitOfWork,
 		IPasswordHasher passwordHasher,
 		IJwtService jwtService,
 		IUserSessionService sessionService,
-		IDeviceInfoService deviceInfoService,
-		IUnitOfWork unitOfWork)
+		IDeviceInfoService deviceInfoService)
 	{
-		_userRepository = userRepository;
-		_companyRepository = companyRepository;
-		_userRoleRepository = userRoleRepository;
-		_userCompanyRoleRepository = userCompanyRoleRepository;
-		_roleRepository = roleRepository;
+		_unitOfWork = unitOfWork;
 		_passwordHasher = passwordHasher;
 		_jwtService = jwtService;
 		_sessionService = sessionService;
 		_deviceInfoService = deviceInfoService;
-		_unitOfWork = unitOfWork;
 	}
 
 	public async Task<Result<AuthResponse>> Handle(
 		LoginCommand request,
 		CancellationToken cancellationToken)
 	{
-		// 1. Kullanıcıyı bul
-		var user = await _userRepository.FirstOrDefaultAsync(
-			u => u.Email == request.Email,
-			cancellationToken);
+		// 1. Kullanıcıyı bul (Global filter'ı bypass et - tüm tenant'larda ara)
+		var user = await _unitOfWork.QueryIgnoreFilters<Domain.Entities.User>()
+			.FirstOrDefaultAsync(u => u.Email == request.Email, cancellationToken);
 
 		if (user == null)
 		{
 			return Result.Failure<AuthResponse>(
-				Error.Create(ErrorCodes.Auth.InvalidCredentials, "Invalid email or password."));
+				Error.Create(ErrorCodes.Auth.UserNotFound, "Invalid email or password."));
 		}
 
-		// 2. Hesap durumunu kontrol et
+		// 2. Hesap durumu kontrolü
 		if (user.Status == UserStatus.Locked)
 		{
-			if (user.LockoutEndAt.HasValue && user.LockoutEndAt.Value > DateTime.UtcNow)
-			{
-				return Result.Failure<AuthResponse>(
-					Error.Create(ErrorCodes.Auth.UserLocked, "Account is locked. Please try again later."));
-			}
-			else
-			{
-				// Kilit süresi dolmuş, kilidi kaldır
-				user.Unlock();
-			}
+			return Result.Failure<AuthResponse>(
+				Error.Create(ErrorCodes.Auth.UserLocked, "Account is locked."));
 		}
 
-		if (user.Status == UserStatus.Inactive)
+		if (user.Status != UserStatus.Active)
 		{
 			return Result.Failure<AuthResponse>(
-				Error.Create(ErrorCodes.Auth.UserNotFound, "Account is inactive."));
+				Error.Create(ErrorCodes.Auth.UserInactive, "Account is not active."));
 		}
 
-		// 3. Şifreyi doğrula
+		// 3. Şifre doğrulama
 		if (!_passwordHasher.VerifyPassword(request.Password, user.PasswordHash))
 		{
 			user.RecordFailedLogin();
@@ -142,12 +115,12 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<AuthResp
 		var accessToken = _jwtService.GenerateAccessToken(jwtUserData);
 		var refreshToken = _jwtService.GenerateRefreshToken();
 
-		// 10. Refresh token'ı user'a kaydet
+		// 10. Refresh token'ı kaydet
 		user.UpdateRefreshToken(refreshToken, _jwtService.GetRefreshTokenExpiration());
 		await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-		// 11. Response oluştur
-		var response = new AuthResponse
+		// 11. Response
+		return Result.Success(new AuthResponse
 		{
 			UserId = user.Id,
 			TenantId = user.TenantId,
@@ -159,78 +132,116 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<AuthResp
 			RefreshTokenExpiresAt = _jwtService.GetRefreshTokenExpiration(),
 			TenantRoles = tenantRoles,
 			Companies = companies
-		};
-
-		return Result.Success(response);
+		});
 	}
 
-	/// <summary>
-	/// Kullanıcının tenant rollerini getirir.
-	/// </summary>
 	private async Task<List<string>> GetUserTenantRolesAsync(
 		Guid userId,
 		Guid tenantId,
 		CancellationToken cancellationToken)
 	{
-		var userRoles = await _userRoleRepository.FindAsync(
-			ur => ur.UserId == userId && ur.TenantId == tenantId && ur.IsActive,
-			cancellationToken);
+		//var roleIds = await _unitOfWork.UserRoles
+		//	.AsNoTracking()
+		//	.Where(ur => ur.UserId == userId && ur.TenantId == tenantId && ur.IsActive)
+		//	.Select(ur => ur.RoleId)
+		//	.ToListAsync(cancellationToken);
 
-		var roleIds = userRoles.Select(ur => ur.RoleId).ToList();
+		//var roles = await _unitOfWork.Roles
+		//	.AsNoTracking()
+		//	.Where(r => roleIds.Contains(r.Id) && r.IsActive)
+		//	.Select(r => r.Code)
+		//	.ToListAsync(cancellationToken);
 
-		var roles = await _roleRepository.FindAsync(
-			r => roleIds.Contains(r.Id) && r.IsActive,
-			cancellationToken);
+		var roles = await _unitOfWork.UserRoles
+			.Where(ur => ur.UserId == userId && ur.TenantId == tenantId && ur.IsActive)
+			.Join(_unitOfWork.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => r)
+			.Where(r => r.IsActive)
+			.Select(r => r.Code)
+			.ToListAsync(cancellationToken);
 
-		return roles.Select(r => r.Code).ToList();
+		return roles;
 	}
 
-	/// <summary>
-	/// Kullanıcının erişebileceği şirketleri getirir.
-	/// </summary>
 	private async Task<List<UserCompanyInfo>> GetUserCompaniesAsync(
 		Guid userId,
 		Guid tenantId,
 		CancellationToken cancellationToken)
 	{
-		var userCompanyRoles = await _userCompanyRoleRepository.FindAsync(
-			ucr => ucr.UserId == userId && ucr.TenantId == tenantId && ucr.IsActive,
-			cancellationToken);
+		var query = from ucr in _unitOfWork.UserCompanyRoles.AsNoTracking()
+					join c in _unitOfWork.Companies on ucr.CompanyId equals c.Id
+					join r in _unitOfWork.Roles on ucr.RoleId equals r.Id
+					where ucr.UserId == userId
+						&& ucr.TenantId == tenantId
+						&& ucr.IsActive
+						&& c.Status == CompanyStatus.Active
+						&& r.IsActive
+					select new
+					{
+						c.Id,
+						CompanyName = c.Name,
+						c.Code,
+						RoleCode = r.Code
+					};
 
-		var companyIds = userCompanyRoles.Select(ucr => ucr.CompanyId).Distinct().ToList();
+		var data = await query.ToListAsync(cancellationToken);
 
-		var companies = await _companyRepository.FindAsync(
-			c => companyIds.Contains(c.Id) && c.Status == CompanyStatus.Active,
-			cancellationToken);
-
-		var roleIds = userCompanyRoles.Select(ucr => ucr.RoleId).Distinct().ToList();
-		var roles = await _roleRepository.FindAsync(
-			r => roleIds.Contains(r.Id) && r.IsActive,
-			cancellationToken);
-
-		var result = new List<UserCompanyInfo>();
-
-		foreach (var company in companies)
-		{
-			var companyRoleIds = userCompanyRoles
-				.Where(ucr => ucr.CompanyId == company.Id)
-				.Select(ucr => ucr.RoleId)
-				.ToList();
-
-			var companyRoles = roles
-				.Where(r => companyRoleIds.Contains(r.Id))
-				.Select(r => r.Code)
-				.ToList();
-
-			result.Add(new UserCompanyInfo
+		return data
+			.GroupBy(x => new { x.Id, x.CompanyName, x.Code })
+			.Select(g => new UserCompanyInfo
 			{
-				CompanyId = company.Id,
-				CompanyName = company.Name,
-				CompanyCode = company.Code,
-				Roles = companyRoles
-			});
-		}
+				CompanyId = g.Key.Id,
+				CompanyName = g.Key.CompanyName,
+				CompanyCode = g.Key.Code,
+				Roles = g.Select(x => x.RoleCode).Distinct().ToList()
+			})
+			.ToList();
 
-		return result;
+
+
+		//var userCompanyRoles = await _unitOfWork.UserCompanyRoles
+		//	.AsNoTracking()
+		//	.Where(ucr => ucr.UserId == userId && ucr.TenantId == tenantId && ucr.IsActive)
+		//	.ToListAsync(cancellationToken);
+
+		//if (!userCompanyRoles.Any())
+		//	return new List<UserCompanyInfo>();
+
+		//var companyIds = userCompanyRoles.Select(ucr => ucr.CompanyId).Distinct().ToList();
+		//var roleIds = userCompanyRoles.Select(ucr => ucr.RoleId).Distinct().ToList();
+
+		//var companies = await _unitOfWork.Companies
+		//	.AsNoTracking()
+		//	.Where(c => companyIds.Contains(c.Id) && c.Status == CompanyStatus.Active)
+		//	.ToListAsync(cancellationToken);
+
+		//var roles = await _unitOfWork.Roles
+		//	.AsNoTracking()
+		//	.Where(r => roleIds.Contains(r.Id) && r.IsActive)
+		//	.ToListAsync(cancellationToken);
+
+		//var result = new List<UserCompanyInfo>();
+
+		//foreach (var company in companies)
+		//{
+		//	var companyRoleIds = userCompanyRoles
+		//		.Where(ucr => ucr.CompanyId == company.Id)
+		//		.Select(ucr => ucr.RoleId)
+		//		.ToList();
+
+		//	var companyRoles = roles
+		//		.Where(r => companyRoleIds.Contains(r.Id))
+		//		.Select(r => r.Code)
+		//		.ToList();
+
+		//	result.Add(new UserCompanyInfo
+		//	{
+		//		CompanyId = company.Id,
+		//		CompanyName = company.Name,
+		//		CompanyCode = company.Code,
+		//		Roles = companyRoles
+		//	});
+		//}
+
+		//return result;
 	}
 }

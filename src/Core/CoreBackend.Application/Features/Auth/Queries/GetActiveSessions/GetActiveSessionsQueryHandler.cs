@@ -29,7 +29,7 @@ public class GetActiveSessionsQueryHandler : IRequestHandler<GetActiveSessionsQu
 		if (!userId.HasValue)
 		{
 			return Result.Failure<List<ActiveSessionResponse>>(
-				Error.Create(ErrorCodes.Auth.UnauthorizedAccess, "Not authenticated."));
+				Error.Create(ErrorCodes.Auth.Unauthorized, "Not authenticated."));
 		}
 
 		var sessions = await _sessionService.GetUserActiveSessionsAsync(userId.Value, cancellationToken);

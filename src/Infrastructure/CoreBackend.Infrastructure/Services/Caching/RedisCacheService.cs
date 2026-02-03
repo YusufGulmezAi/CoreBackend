@@ -1,126 +1,135 @@
 ﻿using System.Text.Json;
-using CoreBackend.Application.Common.Interfaces;
 using Microsoft.Extensions.Caching.Distributed;
-using StackExchange.Redis;
+using Microsoft.Extensions.Logging;
+using CoreBackend.Application.Common.Interfaces;
 
 namespace CoreBackend.Infrastructure.Services.Caching;
 
 /// <summary>
-/// Redis cache servis implementasyonu.
+/// Redis cache servisi (IDistributedCache tabanlı).
 /// </summary>
 public class RedisCacheService : ICacheService
 {
-	private readonly IDistributedCache _distributedCache;
-	private readonly IConnectionMultiplexer _connectionMultiplexer;
-	private readonly JsonSerializerOptions _jsonOptions;
+	private readonly IDistributedCache _cache;
+	private readonly ILogger<RedisCacheService> _logger;
 
 	public RedisCacheService(
-		IDistributedCache distributedCache,
-		IConnectionMultiplexer connectionMultiplexer)
+		IDistributedCache cache,
+		ILogger<RedisCacheService> logger)
 	{
-		_distributedCache = distributedCache;
-		_connectionMultiplexer = connectionMultiplexer;
-		_jsonOptions = new JsonSerializerOptions
-		{
-			PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-			WriteIndented = false
-		};
+		_cache = cache;
+		_logger = logger;
 	}
 
-	/// <summary>
-	/// Cache'ten veri getirir.
-	/// </summary>
 	public async Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default)
 	{
-		var cachedValue = await _distributedCache.GetStringAsync(key, cancellationToken);
-
-		if (string.IsNullOrEmpty(cachedValue))
-			return default;
-
 		try
 		{
-			return JsonSerializer.Deserialize<T>(cachedValue, _jsonOptions);
+			var json = await _cache.GetStringAsync(key, cancellationToken);
+
+			if (string.IsNullOrEmpty(json))
+				return default;
+
+			return JsonSerializer.Deserialize<T>(json);
 		}
-		catch
+		catch (Exception ex)
 		{
+			_logger.LogError(ex, "Error getting cache key: {Key}", key);
 			return default;
 		}
 	}
 
-	/// <summary>
-	/// Cache'e veri yazar.
-	/// </summary>
 	public async Task SetAsync<T>(
 		string key,
 		T value,
 		TimeSpan? expiration = null,
 		CancellationToken cancellationToken = default)
 	{
-		var serializedValue = JsonSerializer.Serialize(value, _jsonOptions);
-
-		var options = new DistributedCacheEntryOptions();
-
-		if (expiration.HasValue)
+		try
 		{
-			options.AbsoluteExpirationRelativeToNow = expiration;
-		}
-		else
-		{
-			// Varsayılan 1 saat
-			options.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1);
-		}
+			var json = JsonSerializer.Serialize(value);
 
-		await _distributedCache.SetStringAsync(key, serializedValue, options, cancellationToken);
+			var options = new DistributedCacheEntryOptions();
+
+			if (expiration.HasValue)
+			{
+				options.AbsoluteExpirationRelativeToNow = expiration;
+			}
+			else
+			{
+				options.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30);
+			}
+
+			await _cache.SetStringAsync(key, json, options, cancellationToken);
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "Error setting cache key: {Key}", key);
+		}
 	}
 
-	/// <summary>
-	/// Cache'ten veri siler.
-	/// </summary>
 	public async Task RemoveAsync(string key, CancellationToken cancellationToken = default)
 	{
-		await _distributedCache.RemoveAsync(key, cancellationToken);
-	}
-
-	/// <summary>
-	/// Belirli bir pattern'e uyan tüm key'leri siler.
-	/// </summary>
-	public async Task RemoveByPrefixAsync(string prefixKey, CancellationToken cancellationToken = default)
-	{
-		var server = _connectionMultiplexer.GetServer(_connectionMultiplexer.GetEndPoints().First());
-		var database = _connectionMultiplexer.GetDatabase();
-
-		var keys = server.Keys(pattern: $"{prefixKey}*").ToArray();
-
-		if (keys.Any())
+		try
 		{
-			await database.KeyDeleteAsync(keys);
+			await _cache.RemoveAsync(key, cancellationToken);
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "Error removing cache key: {Key}", key);
 		}
 	}
 
-	/// <summary>
-	/// Key var mı kontrol eder.
-	/// </summary>
 	public async Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default)
 	{
-		var value = await _distributedCache.GetAsync(key, cancellationToken);
-		return value != null;
+		try
+		{
+			var value = await _cache.GetStringAsync(key, cancellationToken);
+			return !string.IsNullOrEmpty(value);
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "Error checking cache key: {Key}", key);
+			return false;
+		}
 	}
 
-	/// <summary>
-	/// Key'in süresini uzatır.
-	/// </summary>
 	public async Task RefreshAsync(string key, TimeSpan? expiration = null, CancellationToken cancellationToken = default)
 	{
-		var value = await _distributedCache.GetStringAsync(key, cancellationToken);
-
-		if (!string.IsNullOrEmpty(value))
+		try
 		{
-			var options = new DistributedCacheEntryOptions
+			if (expiration.HasValue)
 			{
-				AbsoluteExpirationRelativeToNow = expiration ?? TimeSpan.FromHours(1)
-			};
+				// Yeni süre ile yeniden kaydet
+				var json = await _cache.GetStringAsync(key, cancellationToken);
 
-			await _distributedCache.SetStringAsync(key, value, options, cancellationToken);
+				if (!string.IsNullOrEmpty(json))
+				{
+					var options = new DistributedCacheEntryOptions
+					{
+						AbsoluteExpirationRelativeToNow = expiration
+					};
+
+					await _cache.SetStringAsync(key, json, options, cancellationToken);
+				}
+			}
+			else
+			{
+				// Sadece sliding expiration'ı yenile
+				await _cache.RefreshAsync(key, cancellationToken);
+			}
 		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "Error refreshing cache key: {Key}", key);
+		}
+	}
+
+	public async Task RemoveByPrefixAsync(string prefixKey, CancellationToken cancellationToken = default)
+	{
+		// IDistributedCache pattern silme desteklemiyor
+		// Bu özellik için IConnectionMultiplexer gerekir
+		_logger.LogWarning("RemoveByPrefix is not supported with IDistributedCache. Prefix: {Prefix}", prefixKey);
+		await Task.CompletedTask;
 	}
 }

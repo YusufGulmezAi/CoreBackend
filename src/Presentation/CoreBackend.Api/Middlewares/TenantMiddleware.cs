@@ -11,15 +11,15 @@ public class TenantMiddleware
 	private readonly RequestDelegate _next;
 	private readonly ILogger<TenantMiddleware> _logger;
 
-	// Tenant gerektirmeyen endpoint'ler
-	private static readonly string[] ExcludedPaths = new[]
-	{
-		"/health",
-		"/swagger",
-		"/api/auth/login",
-		"/api/auth/register",
-		"/api/auth/refresh-token"
-	};
+	//// Tenant gerektirmeyen endpoint'ler
+	//private static readonly string[] ExcludedPaths = new[]
+	//{
+	//	"/health",
+	//	"/swagger",
+	//	"/api/auth/login",
+	//	"/api/auth/register",
+	//	"/api/auth/refresh-token"
+	//};
 
 	public TenantMiddleware(
 		RequestDelegate next,

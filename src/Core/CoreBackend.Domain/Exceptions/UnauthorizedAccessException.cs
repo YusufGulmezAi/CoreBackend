@@ -10,7 +10,7 @@ public class UnauthorizedAccessException : DomainException
 {
 	public UnauthorizedAccessException()
 		: base(Error.Create(
-			ErrorCodes.Auth.UnauthorizedAccess,
+			ErrorCodes.Auth.Unauthorized,
 			"Unauthorized access attempt."))
 	{
 	}

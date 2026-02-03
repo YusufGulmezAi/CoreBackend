@@ -1,102 +1,387 @@
 ﻿using System.Linq.Expressions;
 using System.Reflection;
-using Microsoft.EntityFrameworkCore;
 using CoreBackend.Application.Common.Models;
 
 namespace CoreBackend.Infrastructure.Persistence.Extensions;
 
 /// <summary>
 /// IQueryable extension metodları.
-/// Dynamic query, filtering, sorting, paging için.
+/// Dinamik filtreleme, sıralama ve arama için.
 /// </summary>
 public static class QueryableExtensions
 {
+	#region Search
+
 	/// <summary>
-	/// Dinamik sorgu uygular.
+	/// Metin araması uygular.
 	/// </summary>
-	public static IQueryable<T> ApplyDynamicQuery<T>(
+	public static IQueryable<T> ApplySearch<T>(
 		this IQueryable<T> query,
-		DynamicQuery? dynamicQuery) where T : class
+		string? searchText,
+		List<string>? searchFields)
 	{
-		if (dynamicQuery == null)
+		if (string.IsNullOrWhiteSpace(searchText) || searchFields == null || !searchFields.Any())
 			return query;
 
-		// AsNoTracking
-		if (dynamicQuery.AsNoTracking)
-			query = query.AsNoTracking();
+		var parameter = Expression.Parameter(typeof(T), "x");
+		Expression? combinedExpression = null;
 
-		// Includes
-		if (dynamicQuery.Includes?.Any() == true)
-			query = query.ApplyIncludes(dynamicQuery.Includes);
-
-		// Filters
-		if (dynamicQuery.Filters?.Any() == true)
+		foreach (var field in searchFields)
 		{
-			// List<FilterDescriptor>'ı FilterGroup içine sarıyoruz
-			var filterGroup = new FilterGroup
+			var property = typeof(T).GetProperty(field, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
+			if (property == null || property.PropertyType != typeof(string))
+				continue;
+
+			var propertyAccess = Expression.Property(parameter, property);
+			var searchValue = Expression.Constant(searchText.ToLower());
+
+			// property != null && property.ToLower().Contains(searchText.ToLower())
+			var nullCheck = Expression.NotEqual(propertyAccess, Expression.Constant(null, typeof(string)));
+
+			var toLowerMethod = typeof(string).GetMethod("ToLower", Type.EmptyTypes)!;
+			var containsMethod = typeof(string).GetMethod("Contains", new[] { typeof(string) })!;
+
+			var toLowerCall = Expression.Call(propertyAccess, toLowerMethod);
+			var containsCall = Expression.Call(toLowerCall, containsMethod, searchValue);
+
+			var safeContains = Expression.AndAlso(nullCheck, containsCall);
+
+			combinedExpression = combinedExpression == null
+				? safeContains
+				: Expression.OrElse(combinedExpression, safeContains);
+		}
+
+		if (combinedExpression == null)
+			return query;
+
+		var lambda = Expression.Lambda<Func<T, bool>>(combinedExpression, parameter);
+		return query.Where(lambda);
+	}
+
+	#endregion
+
+	#region Filter
+
+	/// <summary>
+	/// Filtreleri uygular.
+	/// </summary>
+	public static IQueryable<T> ApplyFilters<T>(
+		this IQueryable<T> query,
+		List<FilterDescriptor>? filters)
+	{
+		if (filters == null || !filters.Any())
+			return query;
+
+		foreach (var filter in filters)
+		{
+			var predicate = BuildFilterExpression<T>(filter);
+			if (predicate != null)
 			{
-				Filters = dynamicQuery.Filters,
-				Logic = FilterLogic.And
-			};
-			query = query.ApplyFilterGroup(filterGroup);
+				query = query.Where(predicate);
+			}
 		}
-
-		// Sorting
-		if (dynamicQuery.Sort?.Any() == true)
-			query = query.ApplySorting(dynamicQuery.Sort);
 
 		return query;
 	}
 
 	/// <summary>
-	/// Include'ları uygular.
+	/// Filtre gruplarını uygular.
 	/// </summary>
-	public static IQueryable<T> ApplyIncludes<T>(
+	public static IQueryable<T> ApplyFilterGroups<T>(
 		this IQueryable<T> query,
-		List<string> includes) where T : class
+		List<FilterGroup>? filterGroups)
 	{
-		foreach (var include in includes)
+		if (filterGroups == null || !filterGroups.Any())
+			return query;
+
+		foreach (var group in filterGroups)
 		{
-			query = query.Include(include);
+			var predicate = BuildFilterGroupExpression<T>(group);
+			if (predicate != null)
+			{
+				query = query.Where(predicate);
+			}
 		}
-		return query;
-	}
-
-	/// <summary>
-	/// Filtre grubunu uygular.
-	/// </summary>
-	public static IQueryable<T> ApplyFilterGroup<T>(
-		this IQueryable<T> query,
-		FilterGroup filterGroup) where T : class
-	{
-		var predicate = BuildFilterGroupExpression<T>(filterGroup);
-		if (predicate != null)
-			query = query.Where(predicate);
 
 		return query;
 	}
 
 	/// <summary>
-	/// Sıralamayı uygular.
+	/// Tek filtre için expression oluşturur.
 	/// </summary>
-	public static IQueryable<T> ApplySorting<T>(
-		this IQueryable<T> query,
-		List<SortDescriptor> sorts) where T : class
+	private static Expression<Func<T, bool>>? BuildFilterExpression<T>(FilterDescriptor filter)
 	{
-		if (!sorts.Any())
+		var parameter = Expression.Parameter(typeof(T), "x");
+		var property = typeof(T).GetProperty(filter.Field, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
+
+		if (property == null)
+			return null;
+
+		var propertyAccess = Expression.Property(parameter, property);
+
+		Expression? comparison = filter.Operator switch
+		{
+			FilterOperator.Equals => BuildEqualsExpression(propertyAccess, filter.Value, property.PropertyType),
+			FilterOperator.NotEquals => BuildNotEqualsExpression(propertyAccess, filter.Value, property.PropertyType),
+			FilterOperator.Contains => BuildContainsExpression(propertyAccess, filter.Value?.ToString()),
+			FilterOperator.NotContains => BuildNotContainsExpression(propertyAccess, filter.Value?.ToString()),
+			FilterOperator.StartsWith => BuildStartsWithExpression(propertyAccess, filter.Value?.ToString()),
+			FilterOperator.EndsWith => BuildEndsWithExpression(propertyAccess, filter.Value?.ToString()),
+			FilterOperator.GreaterThan => BuildComparisonExpression(propertyAccess, filter.Value, property.PropertyType, ExpressionType.GreaterThan),
+			FilterOperator.GreaterThanOrEquals => BuildComparisonExpression(propertyAccess, filter.Value, property.PropertyType, ExpressionType.GreaterThanOrEqual),
+			FilterOperator.LessThan => BuildComparisonExpression(propertyAccess, filter.Value, property.PropertyType, ExpressionType.LessThan),
+			FilterOperator.LessThanOrEquals => BuildComparisonExpression(propertyAccess, filter.Value, property.PropertyType, ExpressionType.LessThanOrEqual),
+			FilterOperator.Between => BuildBetweenExpression(propertyAccess, filter.Value, filter.ValueTo, property.PropertyType),
+			FilterOperator.In => BuildInExpression(propertyAccess, filter.Value, property.PropertyType),
+			FilterOperator.NotIn => BuildNotInExpression(propertyAccess, filter.Value, property.PropertyType),
+			FilterOperator.IsNull => Expression.Equal(propertyAccess, Expression.Constant(null, property.PropertyType)),
+			FilterOperator.IsNotNull => Expression.NotEqual(propertyAccess, Expression.Constant(null, property.PropertyType)),
+			_ => null
+		};
+
+		if (comparison == null)
+			return null;
+
+		return Expression.Lambda<Func<T, bool>>(comparison, parameter);
+	}
+
+	/// <summary>
+	/// Filtre grubu için expression oluşturur.
+	/// </summary>
+	private static Expression<Func<T, bool>>? BuildFilterGroupExpression<T>(FilterGroup group)
+	{
+		var parameter = Expression.Parameter(typeof(T), "x");
+		Expression? combinedExpression = null;
+
+		// Gruptaki filtreleri işle
+		foreach (var filter in group.Filters)
+		{
+			var filterExpression = BuildFilterExpression<T>(filter);
+			if (filterExpression == null)
+				continue;
+
+			var invokedExpr = Expression.Invoke(filterExpression, parameter);
+
+			combinedExpression = combinedExpression == null
+				? invokedExpr
+				: group.Logic == LogicalOperator.And
+					? Expression.AndAlso(combinedExpression, invokedExpr)
+					: Expression.OrElse(combinedExpression, invokedExpr);
+		}
+
+		// Alt grupları işle
+		if (group.SubGroups != null)
+		{
+			foreach (var subGroup in group.SubGroups)
+			{
+				var subGroupExpression = BuildFilterGroupExpression<T>(subGroup);
+				if (subGroupExpression == null)
+					continue;
+
+				var invokedExpr = Expression.Invoke(subGroupExpression, parameter);
+
+				combinedExpression = combinedExpression == null
+					? invokedExpr
+					: group.Logic == LogicalOperator.And
+						? Expression.AndAlso(combinedExpression, invokedExpr)
+						: Expression.OrElse(combinedExpression, invokedExpr);
+			}
+		}
+
+		if (combinedExpression == null)
+			return null;
+
+		return Expression.Lambda<Func<T, bool>>(combinedExpression, parameter);
+	}
+
+	#region Filter Expression Builders
+
+	private static Expression? BuildEqualsExpression(MemberExpression property, object? value, Type propertyType)
+	{
+		if (value == null)
+			return Expression.Equal(property, Expression.Constant(null, propertyType));
+
+		var convertedValue = ConvertValue(value, propertyType);
+		if (convertedValue == null)
+			return null;
+
+		return Expression.Equal(property, Expression.Constant(convertedValue, propertyType));
+	}
+
+	private static Expression? BuildNotEqualsExpression(MemberExpression property, object? value, Type propertyType)
+	{
+		if (value == null)
+			return Expression.NotEqual(property, Expression.Constant(null, propertyType));
+
+		var convertedValue = ConvertValue(value, propertyType);
+		if (convertedValue == null)
+			return null;
+
+		return Expression.NotEqual(property, Expression.Constant(convertedValue, propertyType));
+	}
+
+	private static Expression? BuildContainsExpression(MemberExpression property, string? value)
+	{
+		if (string.IsNullOrEmpty(value))
+			return null;
+
+		var nullCheck = Expression.NotEqual(property, Expression.Constant(null, typeof(string)));
+		var toLowerMethod = typeof(string).GetMethod("ToLower", Type.EmptyTypes)!;
+		var containsMethod = typeof(string).GetMethod("Contains", new[] { typeof(string) })!;
+
+		var toLowerCall = Expression.Call(property, toLowerMethod);
+		var containsCall = Expression.Call(toLowerCall, containsMethod, Expression.Constant(value.ToLower()));
+
+		return Expression.AndAlso(nullCheck, containsCall);
+	}
+
+	private static Expression? BuildNotContainsExpression(MemberExpression property, string? value)
+	{
+		var containsExpr = BuildContainsExpression(property, value);
+		return containsExpr != null ? Expression.Not(containsExpr) : null;
+	}
+
+	private static Expression? BuildStartsWithExpression(MemberExpression property, string? value)
+	{
+		if (string.IsNullOrEmpty(value))
+			return null;
+
+		var nullCheck = Expression.NotEqual(property, Expression.Constant(null, typeof(string)));
+		var startsWithMethod = typeof(string).GetMethod("StartsWith", new[] { typeof(string), typeof(StringComparison) })!;
+		var startsWithCall = Expression.Call(property, startsWithMethod,
+			Expression.Constant(value),
+			Expression.Constant(StringComparison.OrdinalIgnoreCase));
+
+		return Expression.AndAlso(nullCheck, startsWithCall);
+	}
+
+	private static Expression? BuildEndsWithExpression(MemberExpression property, string? value)
+	{
+		if (string.IsNullOrEmpty(value))
+			return null;
+
+		var nullCheck = Expression.NotEqual(property, Expression.Constant(null, typeof(string)));
+		var endsWithMethod = typeof(string).GetMethod("EndsWith", new[] { typeof(string), typeof(StringComparison) })!;
+		var endsWithCall = Expression.Call(property, endsWithMethod,
+			Expression.Constant(value),
+			Expression.Constant(StringComparison.OrdinalIgnoreCase));
+
+		return Expression.AndAlso(nullCheck, endsWithCall);
+	}
+
+	private static Expression? BuildComparisonExpression(MemberExpression property, object? value, Type propertyType, ExpressionType comparisonType)
+	{
+		if (value == null)
+			return null;
+
+		var convertedValue = ConvertValue(value, propertyType);
+		if (convertedValue == null)
+			return null;
+
+		var constant = Expression.Constant(convertedValue, propertyType);
+
+		return comparisonType switch
+		{
+			ExpressionType.GreaterThan => Expression.GreaterThan(property, constant),
+			ExpressionType.GreaterThanOrEqual => Expression.GreaterThanOrEqual(property, constant),
+			ExpressionType.LessThan => Expression.LessThan(property, constant),
+			ExpressionType.LessThanOrEqual => Expression.LessThanOrEqual(property, constant),
+			_ => null
+		};
+	}
+
+	private static Expression? BuildBetweenExpression(MemberExpression property, object? valueFrom, object? valueTo, Type propertyType)
+	{
+		if (valueFrom == null || valueTo == null)
+			return null;
+
+		var convertedFrom = ConvertValue(valueFrom, propertyType);
+		var convertedTo = ConvertValue(valueTo, propertyType);
+
+		if (convertedFrom == null || convertedTo == null)
+			return null;
+
+		var fromConstant = Expression.Constant(convertedFrom, propertyType);
+		var toConstant = Expression.Constant(convertedTo, propertyType);
+
+		var greaterThanOrEqual = Expression.GreaterThanOrEqual(property, fromConstant);
+		var lessThanOrEqual = Expression.LessThanOrEqual(property, toConstant);
+
+		return Expression.AndAlso(greaterThanOrEqual, lessThanOrEqual);
+	}
+
+	private static Expression? BuildInExpression(MemberExpression property, object? value, Type propertyType)
+	{
+		if (value == null)
+			return null;
+
+		// Value should be IEnumerable
+		var enumerable = value as System.Collections.IEnumerable;
+		if (enumerable == null)
+			return null;
+
+		var values = enumerable.Cast<object>().ToList();
+		if (!values.Any())
+			return null;
+
+		Expression? combinedExpression = null;
+		var parameter = property.Expression as ParameterExpression;
+
+		foreach (var val in values)
+		{
+			var convertedValue = ConvertValue(val, propertyType);
+			if (convertedValue == null)
+				continue;
+
+			var constant = Expression.Constant(convertedValue, propertyType);
+			var equality = Expression.Equal(property, constant);
+
+			combinedExpression = combinedExpression == null
+				? equality
+				: Expression.OrElse(combinedExpression, equality);
+		}
+
+		return combinedExpression;
+	}
+
+	private static Expression? BuildNotInExpression(MemberExpression property, object? value, Type propertyType)
+	{
+		var inExpr = BuildInExpression(property, value, propertyType);
+		return inExpr != null ? Expression.Not(inExpr) : null;
+	}
+
+	#endregion
+
+	#endregion
+
+	#region Sort
+
+	/// <summary>
+	/// Sıralama uygular.
+	/// </summary>
+	public static IQueryable<T> ApplySort<T>(
+		this IQueryable<T> query,
+		List<SortDescriptor>? sorts)
+	{
+		if (sorts == null || !sorts.Any())
 			return query;
 
 		IOrderedQueryable<T>? orderedQuery = null;
 
-		for (int i = 0; i < sorts.Count; i++)
+		foreach (var sort in sorts)
 		{
-			var sort = sorts[i];
 			var parameter = Expression.Parameter(typeof(T), "x");
-			var property = GetNestedProperty(parameter, sort.Field);
-			var lambda = Expression.Lambda<Func<T, object>>(
-				Expression.Convert(property, typeof(object)), parameter);
+			var property = typeof(T).GetProperty(sort.Field, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
 
-			if (i == 0)
+			if (property == null)
+				continue;
+
+			var propertyAccess = Expression.Property(parameter, property);
+			var lambda = Expression.Lambda<Func<T, object>>(
+				Expression.Convert(propertyAccess, typeof(object)),
+				parameter);
+
+			if (orderedQuery == null)
 			{
 				orderedQuery = sort.Direction == SortDirection.Ascending
 					? query.OrderBy(lambda)
@@ -105,8 +390,8 @@ public static class QueryableExtensions
 			else
 			{
 				orderedQuery = sort.Direction == SortDirection.Ascending
-					? orderedQuery!.ThenBy(lambda)
-					: orderedQuery!.ThenByDescending(lambda);
+					? orderedQuery.ThenBy(lambda)
+					: orderedQuery.ThenByDescending(lambda);
 			}
 		}
 
@@ -114,164 +399,96 @@ public static class QueryableExtensions
 	}
 
 	/// <summary>
-	/// Sayfalamayı uygular.
+	/// Varsayılan sıralama uygular (CreatedAt DESC veya Id DESC).
+	/// </summary>
+	public static IQueryable<T> ApplyDefaultSort<T>(this IQueryable<T> query)
+	{
+		var parameter = Expression.Parameter(typeof(T), "x");
+
+		// Önce CreatedAt dene
+		var property = typeof(T).GetProperty("CreatedAt", BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
+
+		// CreatedAt yoksa Id dene
+		if (property == null)
+		{
+			property = typeof(T).GetProperty("Id", BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
+		}
+
+		if (property == null)
+			return query;
+
+		var propertyAccess = Expression.Property(parameter, property);
+		var lambda = Expression.Lambda<Func<T, object>>(
+			Expression.Convert(propertyAccess, typeof(object)),
+			parameter);
+
+		return query.OrderByDescending(lambda);
+	}
+
+	#endregion
+
+	#region Pagination
+
+	/// <summary>
+	/// Sayfalama uygular.
 	/// </summary>
 	public static IQueryable<T> ApplyPaging<T>(
 		this IQueryable<T> query,
 		int pageNumber,
-		int pageSize) where T : class
+		int pageSize)
 	{
+		if (pageNumber < 1) pageNumber = 1;
+		if (pageSize < 1) pageSize = 10;
+		if (pageSize > 100) pageSize = 100; // Max limit
+
 		return query
 			.Skip((pageNumber - 1) * pageSize)
 			.Take(pageSize);
 	}
 
-	/// <summary>
-	/// Hızlı arama uygular (birden fazla alanda).
-	/// </summary>
-	public static IQueryable<T> ApplySearch<T>(
-		this IQueryable<T> query,
-		string? searchText,
-		List<string> searchFields) where T : class
-	{
-		if (string.IsNullOrWhiteSpace(searchText) || !searchFields.Any())
-			return query;
+	#endregion
 
-		var parameter = Expression.Parameter(typeof(T), "x");
-		Expression? combinedExpression = null;
-
-		foreach (var field in searchFields)
-		{
-			try
-			{
-				var property = GetNestedProperty(parameter, field);
-
-				// Sadece string alanlar için Contains uygula
-				if (property.Type == typeof(string))
-				{
-					var containsMethod = typeof(string).GetMethod("Contains", new[] { typeof(string) })!;
-					var searchValue = Expression.Constant(searchText, typeof(string));
-
-					// Null check ekle
-					var nullCheck = Expression.NotEqual(property, Expression.Constant(null, typeof(string)));
-					var containsCall = Expression.Call(property, containsMethod, searchValue);
-					var safeContains = Expression.AndAlso(nullCheck, containsCall);
-
-					combinedExpression = combinedExpression == null
-						? safeContains
-						: Expression.OrElse(combinedExpression, safeContains);
-				}
-			}
-			catch
-			{
-				// Geçersiz alan adını atla
-				continue;
-			}
-		}
-
-		if (combinedExpression != null)
-		{
-			var lambda = Expression.Lambda<Func<T, bool>>(combinedExpression, parameter);
-			query = query.Where(lambda);
-		}
-
-		return query;
-	}
+	#region Helpers
 
 	/// <summary>
-	/// Filtre grubu için expression oluşturur.
+	/// Değeri belirtilen tipe dönüştürür.
 	/// </summary>
-	private static Expression<Func<T, bool>>? BuildFilterGroupExpression<T>(FilterGroup filterGroup)
+	private static object? ConvertValue(object? value, Type targetType)
 	{
-		var parameter = Expression.Parameter(typeof(T), "x");
-		var expression = BuildFilterGroupExpressionRecursive<T>(filterGroup, parameter);
-
-		if (expression == null)
+		if (value == null)
 			return null;
 
-		return Expression.Lambda<Func<T, bool>>(expression, parameter);
-	}
-
-	/// <summary>
-	/// Filtre grubu için recursive expression oluşturur.
-	/// </summary>
-	private static Expression? BuildFilterGroupExpressionRecursive<T>(
-		FilterGroup filterGroup,
-		ParameterExpression parameter)
-	{
-		Expression? result = null;
-
-		// Filtreleri işle
-		foreach (var filter in filterGroup.Filters)
-		{
-			var filterExpression = BuildFilterExpression<T>(filter, parameter);
-			if (filterExpression != null)
-			{
-				result = result == null
-					? filterExpression
-					: CombineExpressions(result, filterExpression, filterGroup.Logic);
-			}
-		}
-
-		// Alt grupları işle
-		foreach (var subGroup in filterGroup.Groups)
-		{
-			var subExpression = BuildFilterGroupExpressionRecursive<T>(subGroup, parameter);
-			if (subExpression != null)
-			{
-				result = result == null
-					? subExpression
-					: CombineExpressions(result, subExpression, filterGroup.Logic);
-			}
-		}
-
-		return result;
-	}
-
-	/// <summary>
-	/// Tekil filtre için expression oluşturur.
-	/// </summary>
-	private static Expression? BuildFilterExpression<T>(
-		FilterDescriptor filter,
-		ParameterExpression parameter)
-	{
 		try
 		{
-			var property = GetNestedProperty(parameter, filter.Field);
-			var propertyType = property.Type;
-			var underlyingType = Nullable.GetUnderlyingType(propertyType) ?? propertyType;
+			// Nullable tip kontrolü
+			var underlyingType = Nullable.GetUnderlyingType(targetType) ?? targetType;
 
-			// IsNull ve IsNotNull için özel işlem
-			if (filter.Operator == FilterOperator.IsNull)
+			// Guid dönüşümü
+			if (underlyingType == typeof(Guid))
 			{
-				return Expression.Equal(property, Expression.Constant(null, propertyType));
+				return value is Guid guid ? guid : Guid.Parse(value.ToString()!);
 			}
 
-			if (filter.Operator == FilterOperator.IsNotNull)
+			// Enum dönüşümü
+			if (underlyingType.IsEnum)
 			{
-				return Expression.NotEqual(property, Expression.Constant(null, propertyType));
+				return Enum.Parse(underlyingType, value.ToString()!, ignoreCase: true);
 			}
 
-			// Değer dönüşümü
-			var value = ConvertValue(filter.Value, underlyingType);
-			var constant = Expression.Constant(value, propertyType);
-
-			return filter.Operator switch
+			// DateTime dönüşümü
+			if (underlyingType == typeof(DateTime))
 			{
-				FilterOperator.Equals => Expression.Equal(property, constant),
-				FilterOperator.NotEquals => Expression.NotEqual(property, constant),
-				FilterOperator.GreaterThan => Expression.GreaterThan(property, constant),
-				FilterOperator.GreaterThanOrEquals => Expression.GreaterThanOrEqual(property, constant),
-				FilterOperator.LessThan => Expression.LessThan(property, constant),
-				FilterOperator.LessThanOrEquals => Expression.LessThanOrEqual(property, constant),
-				FilterOperator.Contains => BuildStringContainsExpression(property, filter),
-				FilterOperator.StartsWith => BuildStringStartsWithExpression(property, filter),
-				FilterOperator.EndsWith => BuildStringEndsWithExpression(property, filter),
-				FilterOperator.Between => BuildBetweenExpression(property, filter, underlyingType),
-				FilterOperator.In => BuildInExpression(property, filter, underlyingType),
-				FilterOperator.NotIn => Expression.Not(BuildInExpression(property, filter, underlyingType)!),
-				_ => null
-			};
+				return value is DateTime dt ? dt : DateTime.Parse(value.ToString()!);
+			}
+
+			// DateOnly dönüşümü
+			if (underlyingType == typeof(DateOnly))
+			{
+				return value is DateOnly d ? d : DateOnly.Parse(value.ToString()!);
+			}
+
+			// Genel dönüşüm
+			return Convert.ChangeType(value, underlyingType);
 		}
 		catch
 		{
@@ -279,187 +496,5 @@ public static class QueryableExtensions
 		}
 	}
 
-	/// <summary>
-	/// String Contains expression oluşturur.
-	/// </summary>
-	private static Expression? BuildStringContainsExpression(
-		Expression property,
-		FilterDescriptor filter)
-	{
-		if (property.Type != typeof(string) || filter.Value == null)
-			return null;
-
-		var value = filter.Value.ToString()!;
-
-		if (!filter.IsCaseSensitive)
-		{
-			var toLowerMethod = typeof(string).GetMethod("ToLower", Type.EmptyTypes)!;
-			property = Expression.Call(property, toLowerMethod);
-			value = value.ToLower();
-		}
-
-		var containsMethod = typeof(string).GetMethod("Contains", new[] { typeof(string) })!;
-		var constant = Expression.Constant(value, typeof(string));
-
-		var nullCheck = Expression.NotEqual(property, Expression.Constant(null, typeof(string)));
-		var containsCall = Expression.Call(property, containsMethod, constant);
-
-		return Expression.AndAlso(nullCheck, containsCall);
-	}
-
-	/// <summary>
-	/// String StartsWith expression oluşturur.
-	/// </summary>
-	private static Expression? BuildStringStartsWithExpression(
-		Expression property,
-		FilterDescriptor filter)
-	{
-		if (property.Type != typeof(string) || filter.Value == null)
-			return null;
-
-		var value = filter.Value.ToString()!;
-
-		if (!filter.IsCaseSensitive)
-		{
-			var toLowerMethod = typeof(string).GetMethod("ToLower", Type.EmptyTypes)!;
-			property = Expression.Call(property, toLowerMethod);
-			value = value.ToLower();
-		}
-
-		var startsWithMethod = typeof(string).GetMethod("StartsWith", new[] { typeof(string) })!;
-		var constant = Expression.Constant(value, typeof(string));
-
-		var nullCheck = Expression.NotEqual(property, Expression.Constant(null, typeof(string)));
-		var startsWithCall = Expression.Call(property, startsWithMethod, constant);
-
-		return Expression.AndAlso(nullCheck, startsWithCall);
-	}
-
-	/// <summary>
-	/// String EndsWith expression oluşturur.
-	/// </summary>
-	private static Expression? BuildStringEndsWithExpression(
-		Expression property,
-		FilterDescriptor filter)
-	{
-		if (property.Type != typeof(string) || filter.Value == null)
-			return null;
-
-		var value = filter.Value.ToString()!;
-
-		if (!filter.IsCaseSensitive)
-		{
-			var toLowerMethod = typeof(string).GetMethod("ToLower", Type.EmptyTypes)!;
-			property = Expression.Call(property, toLowerMethod);
-			value = value.ToLower();
-		}
-
-		var endsWithMethod = typeof(string).GetMethod("EndsWith", new[] { typeof(string) })!;
-		var constant = Expression.Constant(value, typeof(string));
-
-		var nullCheck = Expression.NotEqual(property, Expression.Constant(null, typeof(string)));
-		var endsWithCall = Expression.Call(property, endsWithMethod, constant);
-
-		return Expression.AndAlso(nullCheck, endsWithCall);
-	}
-
-	/// <summary>
-	/// Between expression oluşturur.
-	/// </summary>
-	private static Expression? BuildBetweenExpression(
-		Expression property,
-		FilterDescriptor filter,
-		Type underlyingType)
-	{
-		if (filter.Value == null || filter.ValueTo == null)
-			return null;
-
-		var fromValue = ConvertValue(filter.Value, underlyingType);
-		var toValue = ConvertValue(filter.ValueTo, underlyingType);
-
-		var fromConstant = Expression.Constant(fromValue, property.Type);
-		var toConstant = Expression.Constant(toValue, property.Type);
-
-		var greaterThanOrEqual = Expression.GreaterThanOrEqual(property, fromConstant);
-		var lessThanOrEqual = Expression.LessThanOrEqual(property, toConstant);
-
-		return Expression.AndAlso(greaterThanOrEqual, lessThanOrEqual);
-	}
-
-	/// <summary>
-	/// In expression oluşturur.
-	/// </summary>
-	private static Expression? BuildInExpression(
-		Expression property,
-		FilterDescriptor filter,
-		Type underlyingType)
-	{
-		if (filter.Value == null)
-			return null;
-
-		var values = filter.Value as IEnumerable<object>;
-		if (values == null)
-			return null;
-
-		var convertedValues = values.Select(v => ConvertValue(v, underlyingType)).ToList();
-		var listType = typeof(List<>).MakeGenericType(underlyingType);
-		var list = Activator.CreateInstance(listType);
-		var addMethod = listType.GetMethod("Add")!;
-
-		foreach (var value in convertedValues)
-		{
-			addMethod.Invoke(list, new[] { value });
-		}
-
-		var containsMethod = listType.GetMethod("Contains")!;
-		var listConstant = Expression.Constant(list, listType);
-
-		return Expression.Call(listConstant, containsMethod, property);
-	}
-
-	/// <summary>
-	/// İki expression'ı birleştirir.
-	/// </summary>
-	private static Expression CombineExpressions(
-		Expression left,
-		Expression right,
-		FilterLogic logic)
-	{
-		return logic == FilterLogic.And
-			? Expression.AndAlso(left, right)
-			: Expression.OrElse(left, right);
-	}
-
-	/// <summary>
-	/// Nested property için expression oluşturur.
-	/// </summary>
-	private static Expression GetNestedProperty(Expression parameter, string propertyPath)
-	{
-		Expression property = parameter;
-		foreach (var member in propertyPath.Split('.'))
-		{
-			property = Expression.PropertyOrField(property, member);
-		}
-		return property;
-	}
-
-	/// <summary>
-	/// Değeri hedef tipe dönüştürür.
-	/// </summary>
-	private static object? ConvertValue(object? value, Type targetType)
-	{
-		if (value == null)
-			return null;
-
-		if (targetType == typeof(Guid) && value is string stringValue)
-			return Guid.Parse(stringValue);
-
-		if (targetType == typeof(DateTime) && value is string dateString)
-			return DateTime.Parse(dateString);
-
-		if (targetType.IsEnum && value is string enumString)
-			return Enum.Parse(targetType, enumString);
-
-		return Convert.ChangeType(value, targetType);
-	}
+	#endregion
 }

@@ -15,9 +15,24 @@ public class UserCompanyRole : CompanyAuditableEntity<Guid>
 	public Guid UserId { get; private set; }
 
 	/// <summary>
+	/// Kullanıcı.
+	/// </summary>
+	public User User { get; private set; }
+
+	/// <summary>
 	/// Rol Id.
 	/// </summary>
 	public Guid RoleId { get; private set; }
+
+	/// <summary>
+	/// Rol.
+	/// </summary>
+	public Role Role { get; private set; }
+
+	/// <summary>
+	/// Şirket Id.
+	/// </summary>
+	public Guid CompanyId { get; private set; }
 
 	/// <summary>
 	/// Atama başlangıç tarihi.
@@ -33,6 +48,9 @@ public class UserCompanyRole : CompanyAuditableEntity<Guid>
 	/// Aktif mi?
 	/// </summary>
 	public bool IsActive { get; private set; }
+
+
+
 
 	// EF Core için private constructor
 	private UserCompanyRole() : base() { }

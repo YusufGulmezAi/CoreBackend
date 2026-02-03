@@ -2,7 +2,6 @@
 using CoreBackend.Application.Common.Settings;
 using CoreBackend.Infrastructure.Persistence;
 using CoreBackend.Infrastructure.Persistence.Context;
-using CoreBackend.Infrastructure.Persistence.Repositories;
 using CoreBackend.Infrastructure.Services;
 using CoreBackend.Infrastructure.Services.Caching;
 using CoreBackend.Infrastructure.Services.Localization;
@@ -81,12 +80,8 @@ public static class DependencyInjection
 	/// Repository kayıtları.
 	/// </summary>
 	private static IServiceCollection AddRepositories(this IServiceCollection services)
-	{
-		// Generic repository
-		services.AddScoped(typeof(IRepository<,>), typeof(Repository<,>));
-		services.AddScoped(typeof(IRepositoryExtended<,>), typeof(RepositoryExtended<,>));
-
-		// Unit of Work
+	{		
+		// Unit of Work (Hybrid yaklaşım)
 		services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 		return services;
@@ -138,6 +133,9 @@ public static class DependencyInjection
 	/// <summary>
 	/// Cache servislerini ekler.
 	/// </summary>
+	/// <summary>
+	/// Cache servislerini ekler.
+	/// </summary>
 	private static IServiceCollection AddCaching(
 		this IServiceCollection services,
 		IConfiguration configuration)
@@ -156,7 +154,6 @@ public static class DependencyInjection
 		}
 		else
 		{
-			// Redis yoksa memory cache kullan
 			services.AddDistributedMemoryCache();
 			services.AddScoped<ICacheService, RedisCacheService>();
 		}

@@ -1,31 +1,28 @@
-﻿using CoreBackend.Application.Common.Interfaces;
+﻿using MediatR;
+using CoreBackend.Application.Common.Interfaces;
 using CoreBackend.Application.Common.Models;
 using CoreBackend.Contracts.Common;
+using CoreBackend.Contracts.Companies.Responses;
 using CoreBackend.Domain.Common.Primitives;
 using CoreBackend.Domain.Entities;
-using MediatR;
-using CompanyResponseDto = CoreBackend.Contracts.Companies.Responses.CompanyResponse;
-using PagedRequest = CoreBackend.Application.Common.Models.QueryOptions;
-using PagedResponseDto = CoreBackend.Contracts.Common.PagedResponse<CoreBackend.Contracts.Companies.Responses.CompanyResponse>;
 
 namespace CoreBackend.Application.Features.Companies.Queries.GetPaged;
 
 public class GetCompaniesPagedQueryHandler
-	: IRequestHandler<GetCompaniesPagedQuery, Result<PagedResponseDto>>
+	: IRequestHandler<GetCompaniesPagedQuery, Result<PaginatedList<CompanyResponse>>>
 {
-	private readonly IRepositoryExtended<Company, Guid> _companyRepository;
+	private readonly IUnitOfWork _unitOfWork;
 
-	public GetCompaniesPagedQueryHandler(IRepositoryExtended<Company, Guid> companyRepository)
+	public GetCompaniesPagedQueryHandler(IUnitOfWork unitOfWork)
 	{
-		_companyRepository = companyRepository;
+		_unitOfWork = unitOfWork;
 	}
 
-	public async Task<Result<PagedResponseDto>> Handle(
+	public async Task<Result<PaginatedList<CompanyResponse>>> Handle(
 		GetCompaniesPagedQuery request,
 		CancellationToken cancellationToken)
 	{
-		// Application'daki PagedRequest kullan
-		var pagedRequest = new PagedRequest
+		var queryOptions = new QueryOptions
 		{
 			PageNumber = request.PageNumber,
 			PageSize = request.PageSize,
@@ -35,7 +32,7 @@ public class GetCompaniesPagedQueryHandler
 
 		if (!string.IsNullOrEmpty(request.SortBy))
 		{
-			pagedRequest.Query = new DynamicQuery
+			queryOptions.Query = new DynamicQuery
 			{
 				Sort = new List<SortDescriptor>
 				{
@@ -50,10 +47,10 @@ public class GetCompaniesPagedQueryHandler
 			};
 		}
 
-		var result = await _companyRepository.GetPagedAsync(pagedRequest, cancellationToken);
+		var query = _unitOfWork.QueryNoTracking<Company>();
+		var result = await _unitOfWork.GetPagedAsync(query, queryOptions, cancellationToken);
 
-		// Contracts'taki PagedResponse'a dönüştür
-		var response = new PagedResponseDto
+		var response = new PaginatedList<CompanyResponse>
 		{
 			Items = result.Items.Select(MapToResponse).ToList(),
 			PageNumber = result.PageNumber,
@@ -64,9 +61,9 @@ public class GetCompaniesPagedQueryHandler
 		return Result.Success(response);
 	}
 
-	private static CompanyResponseDto MapToResponse(Company company)
+	private static CompanyResponse MapToResponse(Company company)
 	{
-		return new CompanyResponseDto
+		return new CompanyResponse
 		{
 			Id = company.Id,
 			TenantId = company.TenantId,
@@ -77,7 +74,8 @@ public class GetCompaniesPagedQueryHandler
 			Phone = company.Phone,
 			Email = company.Email,
 			Status = company.Status.ToString(),
-			CreatedAt = company.CreatedAt
+			CreatedAt = company.CreatedAt,
+			UpdatedAt = company.UpdatedAt
 		};
 	}
 }

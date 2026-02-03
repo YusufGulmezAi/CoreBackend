@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using Microsoft.EntityFrameworkCore;
 using CoreBackend.Application.Common.Interfaces;
 using CoreBackend.Contracts.Companies.Responses;
 using CoreBackend.Domain.Common.Primitives;
@@ -9,18 +10,20 @@ namespace CoreBackend.Application.Features.Companies.Queries.GetById;
 
 public class GetCompanyByIdQueryHandler : IRequestHandler<GetCompanyByIdQuery, Result<CompanyResponse>>
 {
-	private readonly IRepositoryExtended<Company, Guid> _companyRepository;
+	private readonly IUnitOfWork _unitOfWork;
 
-	public GetCompanyByIdQueryHandler(IRepositoryExtended<Company, Guid> companyRepository)
+	public GetCompanyByIdQueryHandler(IUnitOfWork unitOfWork)
 	{
-		_companyRepository = companyRepository;
+		_unitOfWork = unitOfWork;
 	}
 
 	public async Task<Result<CompanyResponse>> Handle(
 		GetCompanyByIdQuery request,
 		CancellationToken cancellationToken)
 	{
-		var company = await _companyRepository.GetByIdAsync(request.Id, cancellationToken);
+		var company = await _unitOfWork.Companies
+			.AsNoTracking()
+			.FirstOrDefaultAsync(c => c.Id == request.Id, cancellationToken);
 
 		if (company == null)
 		{
@@ -44,7 +47,8 @@ public class GetCompanyByIdQueryHandler : IRequestHandler<GetCompanyByIdQuery, R
 			Phone = company.Phone,
 			Email = company.Email,
 			Status = company.Status.ToString(),
-			CreatedAt = company.CreatedAt
+			CreatedAt = company.CreatedAt,
+			UpdatedAt = company.UpdatedAt
 		};
 	}
 }

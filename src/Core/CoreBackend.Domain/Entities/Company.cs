@@ -55,8 +55,16 @@ public class Company : TenantAuditableEntity<Guid>
 	/// </summary>
 	public string? Settings { get; private set; }
 
+	/// <summary>
+	/// Kullanıcı-Organizasyon-Rol ilişkileri.
+	/// </summary>
+	public virtual ICollection<UserCompanyRole> UserCompanyRoles { get; private set; }
+
 	// EF Core için private constructor
-	private Company() : base() { }
+	private Company() : base() 
+	{
+		UserCompanyRoles = [];
+	}
 
 	private Company(
 		Guid id,

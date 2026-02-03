@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CoreBackend.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260131233424_InitialCreate")]
+    [Migration("20260203212804_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -59,12 +59,6 @@ namespace CoreBackend.Infrastructure.Persistence.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
-                    b.Property<DateTime?>("ModifiedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("ModifiedBy")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -75,8 +69,7 @@ namespace CoreBackend.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(20)");
 
                     b.Property<string>("Settings")
-                        .HasMaxLength(4000)
-                        .HasColumnType("character varying(4000)");
+                        .HasColumnType("text");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
@@ -86,20 +79,31 @@ namespace CoreBackend.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(20)");
 
                     b.Property<string>("TaxOffice")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasColumnType("text");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("Status");
-
-                    b.HasIndex("TenantId");
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("IX_Companies_TenantId_Active")
+                        .HasFilter("\"IsDeleted\" = false");
 
                     b.HasIndex("TenantId", "Code")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("IX_Companies_TenantId_Code_Unique_Active")
+                        .HasFilter("\"IsDeleted\" = false");
+
+                    b.HasIndex("TenantId", "Status")
+                        .HasDatabaseName("IX_Companies_TenantId_Status_Active")
+                        .HasFilter("\"IsDeleted\" = false");
 
                     b.ToTable("Companies", (string)null);
                 });
@@ -142,23 +146,27 @@ namespace CoreBackend.Infrastructure.Persistence.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
-                    b.Property<DateTime?>("ModifiedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("ModifiedBy")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Code")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("IX_Permissions_Code_Unique_Active")
+                        .HasFilter("\"IsDeleted\" = false");
 
-                    b.HasIndex("Group");
+                    b.HasIndex("Group")
+                        .HasDatabaseName("IX_Permissions_Group_Active")
+                        .HasFilter("\"IsDeleted\" = false");
 
                     b.ToTable("Permissions", (string)null);
                 });
@@ -171,8 +179,7 @@ namespace CoreBackend.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("Code")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -187,8 +194,7 @@ namespace CoreBackend.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                        .HasColumnType("text");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
@@ -202,16 +208,9 @@ namespace CoreBackend.Infrastructure.Persistence.Migrations
                     b.Property<int>("Level")
                         .HasColumnType("integer");
 
-                    b.Property<DateTime?>("ModifiedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("ModifiedBy")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasColumnType("text");
 
                     b.Property<int?>("SessionTimeoutMinutes")
                         .HasColumnType("integer");
@@ -219,16 +218,17 @@ namespace CoreBackend.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
 
-                    b.HasKey("Id");
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
 
-                    b.HasIndex("Level");
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
 
                     b.HasIndex("TenantId");
 
-                    b.HasIndex("TenantId", "Code")
-                        .IsUnique();
-
-                    b.ToTable("Roles", (string)null);
+                    b.ToTable("Roles");
                 });
 
             modelBuilder.Entity("CoreBackend.Domain.Entities.RolePermission", b =>
@@ -252,12 +252,6 @@ namespace CoreBackend.Infrastructure.Persistence.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
-                    b.Property<DateTime?>("ModifiedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("ModifiedBy")
-                        .HasColumnType("uuid");
-
                     b.Property<Guid>("PermissionId")
                         .HasColumnType("uuid");
 
@@ -265,6 +259,12 @@ namespace CoreBackend.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
@@ -275,10 +275,94 @@ namespace CoreBackend.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId");
 
-                    b.HasIndex("RoleId", "PermissionId")
-                        .IsUnique();
+                    b.ToTable("RolePermissions");
+                });
 
-                    b.ToTable("RolePermissions", (string)null);
+            modelBuilder.Entity("CoreBackend.Domain.Entities.SessionHistory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Action")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("AdditionalData")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<string>("BrowserName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("City")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Country")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeviceType")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("GeoLocation")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(45)
+                        .HasColumnType("character varying(45)");
+
+                    b.Property<string>("OperatingSystem")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("RevokeReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid?>("RevokedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SessionId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Action");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("RevokedByUserId");
+
+                    b.HasIndex("SessionId");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("TenantId", "CreatedAt");
+
+                    b.HasIndex("UserId", "CreatedAt");
+
+                    b.ToTable("SessionHistories", (string)null);
                 });
 
             modelBuilder.Entity("CoreBackend.Domain.Entities.Tenant", b =>
@@ -286,6 +370,20 @@ namespace CoreBackend.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<string>("AllowedTwoFactorMethods")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ContactEmail")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ContactPhone")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -301,8 +399,7 @@ namespace CoreBackend.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("Email")
                         .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
+                        .HasColumnType("text");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
@@ -310,30 +407,27 @@ namespace CoreBackend.Infrastructure.Persistence.Migrations
                     b.Property<int>("MaxCompanyCount")
                         .HasColumnType("integer");
 
-                    b.Property<DateTime?>("ModifiedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("ModifiedBy")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
                     b.Property<string>("Phone")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
+                        .HasColumnType("text");
 
                     b.Property<int?>("SessionTimeoutMinutes")
                         .HasColumnType("integer");
 
                     b.Property<string>("Settings")
-                        .HasMaxLength(4000)
-                        .HasColumnType("character varying(4000)");
+                        .HasColumnType("text");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
+
+                    b.Property<string>("Subdomain")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<DateTime?>("SubscriptionEndDate")
                         .HasColumnType("timestamp with time zone");
@@ -341,14 +435,75 @@ namespace CoreBackend.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("SubscriptionStartDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("TwoFactorPolicy")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("Email")
-                        .IsUnique();
+                    b.HasIndex("Status")
+                        .HasDatabaseName("IX_Tenants_Status_Active")
+                        .HasFilter("\"IsDeleted\" = false");
 
-                    b.HasIndex("Status");
+                    b.HasIndex("Subdomain")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Tenants_Subdomain_Unique_Active")
+                        .HasFilter("\"IsDeleted\" = false AND \"Subdomain\" IS NOT NULL");
 
                     b.ToTable("Tenants", (string)null);
+                });
+
+            modelBuilder.Entity("CoreBackend.Domain.Entities.TwoFactorCode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(6)
+                        .HasColumnType("character varying(6)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsUsed")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Method")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("UserId", "Code", "IsUsed");
+
+                    b.ToTable("TwoFactorCodes", (string)null);
                 });
 
             modelBuilder.Entity("CoreBackend.Domain.Entities.User", b =>
@@ -399,12 +554,6 @@ namespace CoreBackend.Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("LockoutEndAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime?>("ModifiedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("ModifiedBy")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -414,6 +563,13 @@ namespace CoreBackend.Infrastructure.Persistence.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<int>("RecoveryCodeCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("RecoveryCodes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
                     b.Property<string>("RefreshToken")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
@@ -422,13 +578,28 @@ namespace CoreBackend.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Settings")
-                        .HasMaxLength(4000)
-                        .HasColumnType("character varying(4000)");
+                        .HasColumnType("text");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
                     b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TotpSecretKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("TwoFactorEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("TwoFactorMethod")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
                         .HasColumnType("uuid");
 
                     b.Property<string>("Username")
@@ -438,15 +609,23 @@ namespace CoreBackend.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Status");
-
-                    b.HasIndex("TenantId");
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("IX_Users_TenantId_Active")
+                        .HasFilter("\"IsDeleted\" = false");
 
                     b.HasIndex("TenantId", "Email")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("IX_Users_TenantId_Email_Unique_Active")
+                        .HasFilter("\"IsDeleted\" = false");
+
+                    b.HasIndex("TenantId", "Status")
+                        .HasDatabaseName("IX_Users_TenantId_Status_Active")
+                        .HasFilter("\"IsDeleted\" = false");
 
                     b.HasIndex("TenantId", "Username")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("IX_Users_TenantId_Username_Unique_Active")
+                        .HasFilter("\"IsDeleted\" = false");
 
                     b.ToTable("Users", (string)null);
                 });
@@ -484,16 +663,16 @@ namespace CoreBackend.Infrastructure.Persistence.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
-                    b.Property<DateTime?>("ModifiedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("ModifiedBy")
-                        .HasColumnType("uuid");
-
                     b.Property<Guid>("RoleId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("UserId")
@@ -505,12 +684,20 @@ namespace CoreBackend.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("RoleId");
 
-                    b.HasIndex("TenantId");
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("IX_UserCompanyRoles_TenantId_Active")
+                        .HasFilter("\"IsDeleted\" = false");
 
                     b.HasIndex("UserId");
 
-                    b.HasIndex("UserId", "CompanyId", "RoleId")
-                        .IsUnique();
+                    b.HasIndex("TenantId", "UserId", "CompanyId")
+                        .HasDatabaseName("IX_UserCompanyRoles_UserId_CompanyId_Active")
+                        .HasFilter("\"IsDeleted\" = false AND \"IsActive\" = true");
+
+                    b.HasIndex("TenantId", "UserId", "CompanyId", "RoleId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_UserCompanyRoles_Unique_Active")
+                        .HasFilter("\"IsDeleted\" = false");
 
                     b.ToTable("UserCompanyRoles", (string)null);
                 });
@@ -545,16 +732,16 @@ namespace CoreBackend.Infrastructure.Persistence.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
-                    b.Property<DateTime?>("ModifiedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("ModifiedBy")
-                        .HasColumnType("uuid");
-
                     b.Property<Guid>("RoleId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("UserId")
@@ -568,10 +755,7 @@ namespace CoreBackend.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.HasIndex("UserId", "RoleId")
-                        .IsUnique();
-
-                    b.ToTable("UserRoles", (string)null);
+                    b.ToTable("UserRoles");
                 });
 
             modelBuilder.Entity("CoreBackend.Domain.Entities.UserSession", b =>
@@ -587,8 +771,7 @@ namespace CoreBackend.Infrastructure.Persistence.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<string>("BrowserName")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -603,20 +786,18 @@ namespace CoreBackend.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("DeviceType")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("ExpiresAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("GeoLocation")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                        .HasColumnType("text");
 
                     b.Property<string>("IpAddress")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasMaxLength(45)
+                        .HasColumnType("character varying(45)");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
@@ -627,15 +808,8 @@ namespace CoreBackend.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("LastActivityAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime?>("ModifiedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("ModifiedBy")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("OperatingSystem")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasColumnType("text");
 
                     b.Property<string>("RefreshToken")
                         .HasMaxLength(500)
@@ -651,18 +825,22 @@ namespace CoreBackend.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("RevokedReason")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                        .HasColumnType("text");
 
                     b.Property<string>("SessionId")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("StartedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
                         .HasColumnType("uuid");
 
                     b.Property<string>("UserAgent")
@@ -675,120 +853,189 @@ namespace CoreBackend.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ExpiresAt");
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("IX_UserSessions_TenantId");
 
-                    b.HasIndex("IsRevoked");
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_UserSessions_UserId");
 
-                    b.HasIndex("SessionId")
-                        .IsUnique();
-
-                    b.HasIndex("TenantId");
-
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId", "IsRevoked")
+                        .HasDatabaseName("IX_UserSessions_UserId_IsRevoked");
 
                     b.ToTable("UserSessions", (string)null);
                 });
 
             modelBuilder.Entity("CoreBackend.Domain.Entities.Company", b =>
                 {
-                    b.HasOne("CoreBackend.Domain.Entities.Tenant", null)
-                        .WithMany()
+                    b.HasOne("CoreBackend.Domain.Entities.Tenant", "Tenant")
+                        .WithMany("Companies")
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("CoreBackend.Domain.Entities.Role", b =>
                 {
-                    b.HasOne("CoreBackend.Domain.Entities.Tenant", null)
-                        .WithMany()
+                    b.HasOne("CoreBackend.Domain.Entities.Tenant", "Tenant")
+                        .WithMany("Roles")
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("CoreBackend.Domain.Entities.RolePermission", b =>
                 {
-                    b.HasOne("CoreBackend.Domain.Entities.Permission", null)
-                        .WithMany()
+                    b.HasOne("CoreBackend.Domain.Entities.Permission", "Permission")
+                        .WithMany("RolePermissions")
                         .HasForeignKey("PermissionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("CoreBackend.Domain.Entities.Role", null)
-                        .WithMany()
+                    b.HasOne("CoreBackend.Domain.Entities.Role", "Role")
+                        .WithMany("RolePermissions")
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("CoreBackend.Domain.Entities.Tenant", null)
+                    b.HasOne("CoreBackend.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Permission");
+
+                    b.Navigation("Role");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("CoreBackend.Domain.Entities.SessionHistory", b =>
+                {
+                    b.HasOne("CoreBackend.Domain.Entities.User", "RevokedByUser")
+                        .WithMany()
+                        .HasForeignKey("RevokedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("CoreBackend.Domain.Entities.Tenant", "Tenant")
                         .WithMany()
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("CoreBackend.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("RevokedByUser");
+
+                    b.Navigation("Tenant");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("CoreBackend.Domain.Entities.TwoFactorCode", b =>
+                {
+                    b.HasOne("CoreBackend.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CoreBackend.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("CoreBackend.Domain.Entities.User", b =>
                 {
-                    b.HasOne("CoreBackend.Domain.Entities.Tenant", null)
-                        .WithMany()
+                    b.HasOne("CoreBackend.Domain.Entities.Tenant", "Tenant")
+                        .WithMany("Users")
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("CoreBackend.Domain.Entities.UserCompanyRole", b =>
                 {
-                    b.HasOne("CoreBackend.Domain.Entities.Company", null)
-                        .WithMany()
+                    b.HasOne("CoreBackend.Domain.Entities.Company", "Company")
+                        .WithMany("UserCompanyRoles")
                         .HasForeignKey("CompanyId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("CoreBackend.Domain.Entities.Role", null)
+                    b.HasOne("CoreBackend.Domain.Entities.Role", "Role")
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("CoreBackend.Domain.Entities.Tenant", null)
+                    b.HasOne("CoreBackend.Domain.Entities.Tenant", "Tenant")
                         .WithMany()
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("CoreBackend.Domain.Entities.User", null)
-                        .WithMany()
+                    b.HasOne("CoreBackend.Domain.Entities.User", "User")
+                        .WithMany("UserCompanyRoles")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Company");
+
+                    b.Navigation("Role");
+
+                    b.Navigation("Tenant");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("CoreBackend.Domain.Entities.UserRole", b =>
                 {
-                    b.HasOne("CoreBackend.Domain.Entities.Role", null)
-                        .WithMany()
+                    b.HasOne("CoreBackend.Domain.Entities.Role", "Role")
+                        .WithMany("UserRoles")
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("CoreBackend.Domain.Entities.Tenant", null)
+                    b.HasOne("CoreBackend.Domain.Entities.Tenant", "Tenant")
                         .WithMany()
                         .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("CoreBackend.Domain.Entities.User", null)
-                        .WithMany()
+                    b.HasOne("CoreBackend.Domain.Entities.User", "User")
+                        .WithMany("UserRoles")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Role");
+
+                    b.Navigation("Tenant");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("CoreBackend.Domain.Entities.UserSession", b =>
                 {
-                    b.HasOne("CoreBackend.Domain.Entities.Tenant", null)
-                        .WithMany()
+                    b.HasOne("CoreBackend.Domain.Entities.Tenant", "Tenant")
+                        .WithMany("UserSessions")
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -798,6 +1045,43 @@ namespace CoreBackend.Infrastructure.Persistence.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("CoreBackend.Domain.Entities.Company", b =>
+                {
+                    b.Navigation("UserCompanyRoles");
+                });
+
+            modelBuilder.Entity("CoreBackend.Domain.Entities.Permission", b =>
+                {
+                    b.Navigation("RolePermissions");
+                });
+
+            modelBuilder.Entity("CoreBackend.Domain.Entities.Role", b =>
+                {
+                    b.Navigation("RolePermissions");
+
+                    b.Navigation("UserRoles");
+                });
+
+            modelBuilder.Entity("CoreBackend.Domain.Entities.Tenant", b =>
+                {
+                    b.Navigation("Companies");
+
+                    b.Navigation("Roles");
+
+                    b.Navigation("UserSessions");
+
+                    b.Navigation("Users");
+                });
+
+            modelBuilder.Entity("CoreBackend.Domain.Entities.User", b =>
+                {
+                    b.Navigation("UserCompanyRoles");
+
+                    b.Navigation("UserRoles");
                 });
 #pragma warning restore 612, 618
         }

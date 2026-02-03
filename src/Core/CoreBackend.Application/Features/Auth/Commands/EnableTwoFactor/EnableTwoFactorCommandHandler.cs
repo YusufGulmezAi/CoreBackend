@@ -5,14 +5,12 @@ using CoreBackend.Domain.Common.Primitives;
 using CoreBackend.Domain.Entities;
 using CoreBackend.Domain.Enums;
 using CoreBackend.Domain.Errors;
+using Microsoft.EntityFrameworkCore;
 
 namespace CoreBackend.Application.Features.Auth.Commands.EnableTwoFactor;
 
 public class EnableTwoFactorCommandHandler : IRequestHandler<EnableTwoFactorCommand, Result<TwoFactorSetupResponse>>
 {
-	private readonly IRepositoryExtended<User, Guid> _userRepository;
-	private readonly IRepositoryExtended<Tenant, Guid> _tenantRepository;
-	private readonly IRepositoryExtended<TwoFactorCode, Guid> _twoFactorCodeRepository;
 	private readonly ICurrentUserService _currentUserService;
 	private readonly ITotpService _totpService;
 	private readonly IEmailService _emailService;
@@ -20,18 +18,12 @@ public class EnableTwoFactorCommandHandler : IRequestHandler<EnableTwoFactorComm
 	private readonly IUnitOfWork _unitOfWork;
 
 	public EnableTwoFactorCommandHandler(
-		IRepositoryExtended<User, Guid> userRepository,
-		IRepositoryExtended<Tenant, Guid> tenantRepository,
-		IRepositoryExtended<TwoFactorCode, Guid> twoFactorCodeRepository,
 		ICurrentUserService currentUserService,
 		ITotpService totpService,
 		IEmailService emailService,
 		ISmsService smsService,
 		IUnitOfWork unitOfWork)
 	{
-		_userRepository = userRepository;
-		_tenantRepository = tenantRepository;
-		_twoFactorCodeRepository = twoFactorCodeRepository;
 		_currentUserService = currentUserService;
 		_totpService = totpService;
 		_emailService = emailService;
@@ -49,10 +41,10 @@ public class EnableTwoFactorCommandHandler : IRequestHandler<EnableTwoFactorComm
 		if (!userId.HasValue || !tenantId.HasValue)
 		{
 			return Result.Failure<TwoFactorSetupResponse>(
-				Error.Create(ErrorCodes.Auth.UnauthorizedAccess, "Not authenticated."));
+				Error.Create(ErrorCodes.Auth.Unauthorized, "Not authenticated."));
 		}
 
-		var user = await _userRepository.GetByIdAsync(userId.Value, cancellationToken);
+		var user = await _unitOfWork.Users.FindAsync(userId.Value, cancellationToken);
 		if (user == null)
 		{
 			return Result.Failure<TwoFactorSetupResponse>(
@@ -66,7 +58,7 @@ public class EnableTwoFactorCommandHandler : IRequestHandler<EnableTwoFactorComm
 		}
 
 		// Tenant'ın izin verdiği metodları kontrol et
-		var tenant = await _tenantRepository.GetByIdAsync(tenantId.Value, cancellationToken);
+		var tenant = await _unitOfWork.Tenants.SingleOrDefaultAsync(x => x.Id == tenantId.Value, cancellationToken);
 		if (tenant != null && tenant.AllowedTwoFactorMethods.Any() && !tenant.AllowedTwoFactorMethods.Contains(request.Method))
 		{
 			return Result.Failure<TwoFactorSetupResponse>(
@@ -90,7 +82,7 @@ public class EnableTwoFactorCommandHandler : IRequestHandler<EnableTwoFactorComm
 
 			case TwoFactorMethod.Email:
 				var emailCode = TwoFactorCode.Create(tenantId.Value, userId.Value, TwoFactorMethod.Email);
-				await _twoFactorCodeRepository.AddAsync(emailCode, cancellationToken);
+				await _unitOfWork.TwoFactorCodes.AddAsync(emailCode, cancellationToken);
 				await _unitOfWork.SaveChangesAsync(cancellationToken);
 				await _emailService.SendTwoFactorCodeAsync(user.Email, emailCode.Code, 5, cancellationToken);
 				response.Message = "A verification code has been sent to your email.";
@@ -103,7 +95,7 @@ public class EnableTwoFactorCommandHandler : IRequestHandler<EnableTwoFactorComm
 						Error.Create(ErrorCodes.Sms.InvalidPhoneNumber, "Phone number is required for SMS verification."));
 				}
 				var smsCode = TwoFactorCode.Create(tenantId.Value, userId.Value, TwoFactorMethod.Sms);
-				await _twoFactorCodeRepository.AddAsync(smsCode, cancellationToken);
+				await _unitOfWork.TwoFactorCodes.AddAsync(smsCode, cancellationToken);
 				await _unitOfWork.SaveChangesAsync(cancellationToken);
 				await _smsService.SendTwoFactorCodeAsync(user.Phone, smsCode.Code, 5, cancellationToken);
 				response.Message = "A verification code has been sent to your phone.";

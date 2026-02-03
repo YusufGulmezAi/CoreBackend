@@ -1,0 +1,28 @@
+Docker servislerini baþlatmak için aþaðýdaki komutu kullanabilirsiniz:
+docker-compose -f docker-compose.dev.yml up -d
+
+Docker Servislerini Kontrol Et
+docker-compose -f docker-compose.dev.yml up -d
+
+PostgreSQL'in Hazýr Olduðunu Kontrol Et
+docker exec -it enterprise-postgres psql -U postgres -d enterprise_saas -c "SELECT 1"
+
+
+Servisler Baþlatýldý mý?
+docker-compose -f docker-compose.dev.yml ps
+
+Docker Servislerini Durdurmak Ýçin
+docker-compose -f docker-compose.dev.yml down
+
+
+
+
+Migration Almak Ýçin
+dotnet ef migrations add AddFilteredIndexesAndHybridUoW -p src/Infrastructure/CoreBackend.Infrastructure -s src/Presentation/CoreBackend.Api -o Persistence/Migrations
+
+Update-Database Komutu
+dotnet ef database update -p src/Infrastructure/CoreBackend.Infrastructure -s src/Presentation/CoreBackend.Api
+
+
+remove migraion
+dotnet ef migrations remove -p src/Infrastructure/CoreBackend.Infrastructure -s src/Presentation/CoreBackend.Api

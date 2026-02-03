@@ -107,8 +107,8 @@ public class ApplicationDbContext : DbContext
 					break;
 
 				case EntityState.Modified:
-					entry.Property(nameof(IAuditable.ModifiedAt)).CurrentValue = DateTime.UtcNow;
-					entry.Property(nameof(IAuditable.ModifiedBy)).CurrentValue = _currentUserService.UserId;
+					entry.Property(nameof(IAuditable.UpdatedAt)).CurrentValue = DateTime.UtcNow;
+					entry.Property(nameof(IAuditable.UpdatedBy)).CurrentValue = _currentUserService.UserId;
 					break;
 			}
 		}

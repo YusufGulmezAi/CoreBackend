@@ -33,7 +33,7 @@ public class LogoutAllCommandHandler : IRequestHandler<LogoutAllCommand, Result>
 
 		if (!userId.HasValue || !tenantId.HasValue)
 		{
-			return Result.Failure(Error.Create(ErrorCodes.Auth.UnauthorizedAccess, "Not authenticated."));
+			return Result.Failure(Error.Create(ErrorCodes.Auth.Unauthorized, "Not authenticated."));
 		}
 
 		// Tüm aktif session'ları al

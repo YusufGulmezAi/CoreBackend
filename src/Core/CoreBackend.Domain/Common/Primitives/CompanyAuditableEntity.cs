@@ -1,4 +1,5 @@
 ﻿using CoreBackend.Domain.Common.Interfaces;
+using CoreBackend.Domain.Entities;
 
 namespace CoreBackend.Domain.Common.Primitives;
 
@@ -10,6 +11,11 @@ public abstract class CompanyAuditableEntity<TId> : TenantAuditableEntity<TId>, 
 	where TId : notnull
 {
 	public Guid CompanyId { get; private set; }
+
+	/// <summary>
+	/// Şirket.
+	/// </summary>
+	public Company Company { get; private set; }
 
 	protected CompanyAuditableEntity() : base() { }
 

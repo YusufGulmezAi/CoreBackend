@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using Microsoft.EntityFrameworkCore;
 using CoreBackend.Application.Common.Interfaces;
 using CoreBackend.Contracts.Companies.Responses;
 using CoreBackend.Domain.Common.Primitives;
@@ -9,14 +10,10 @@ namespace CoreBackend.Application.Features.Companies.Commands.Update;
 
 public class UpdateCompanyCommandHandler : IRequestHandler<UpdateCompanyCommand, Result<CompanyResponse>>
 {
-	private readonly IRepositoryExtended<Company, Guid> _companyRepository;
 	private readonly IUnitOfWork _unitOfWork;
 
-	public UpdateCompanyCommandHandler(
-		IRepositoryExtended<Company, Guid> companyRepository,
-		IUnitOfWork unitOfWork)
+	public UpdateCompanyCommandHandler(IUnitOfWork unitOfWork)
 	{
-		_companyRepository = companyRepository;
 		_unitOfWork = unitOfWork;
 	}
 
@@ -24,7 +21,8 @@ public class UpdateCompanyCommandHandler : IRequestHandler<UpdateCompanyCommand,
 		UpdateCompanyCommand request,
 		CancellationToken cancellationToken)
 	{
-		var company = await _companyRepository.GetByIdAsync(request.Id, cancellationToken);
+		var company = await _unitOfWork.Companies
+			.FirstOrDefaultAsync(c => c.Id == request.Id, cancellationToken);
 
 		if (company == null)
 		{
@@ -39,7 +37,6 @@ public class UpdateCompanyCommandHandler : IRequestHandler<UpdateCompanyCommand,
 			request.Phone,
 			request.Email);
 
-		_companyRepository.Update(company);
 		await _unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return Result.Success(MapToResponse(company));
@@ -58,7 +55,8 @@ public class UpdateCompanyCommandHandler : IRequestHandler<UpdateCompanyCommand,
 			Phone = company.Phone,
 			Email = company.Email,
 			Status = company.Status.ToString(),
-			CreatedAt = company.CreatedAt
+			CreatedAt = company.CreatedAt,
+			UpdatedAt = company.UpdatedAt
 		};
 	}
 }

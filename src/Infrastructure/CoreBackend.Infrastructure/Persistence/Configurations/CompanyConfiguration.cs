@@ -1,65 +1,55 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using CoreBackend.Domain.Entities;
 using CoreBackend.Domain.Constants;
+using CoreBackend.Domain.Entities;
 
 namespace CoreBackend.Infrastructure.Persistence.Configurations;
 
-/// <summary>
-/// Company entity konfigürasyonu.
-/// </summary>
 public class CompanyConfiguration : IEntityTypeConfiguration<Company>
 {
 	public void Configure(EntityTypeBuilder<Company> builder)
 	{
-		// Tablo adı
 		builder.ToTable("Companies");
 
-		// Primary Key
-		builder.HasKey(c => c.Id);
+		builder.HasKey(x => x.Id);
 
-		// Properties
-		builder.Property(c => c.Name)
+		// Soft Delete Query Filter
+		builder.HasQueryFilter(x => !x.IsDeleted);
+
+		builder.Property(x => x.Name)
 			.IsRequired()
 			.HasMaxLength(EntityConstants.Company.NameMaxLength);
 
-		builder.Property(c => c.Code)
+		builder.Property(x => x.Code)
 			.IsRequired()
 			.HasMaxLength(EntityConstants.Company.CodeMaxLength);
 
-		builder.Property(c => c.TaxNumber)
+		builder.Property(x => x.TaxNumber)
 			.HasMaxLength(EntityConstants.Company.TaxNumberMaxLength);
 
-		builder.Property(c => c.TaxOffice)
-			.HasMaxLength(EntityConstants.Company.TaxOfficeMaxLength);
-
-		builder.Property(c => c.Email)
-			.HasMaxLength(EntityConstants.Company.EmailMaxLength);
-
-		builder.Property(c => c.Phone)
-			.HasMaxLength(EntityConstants.Company.PhoneMaxLength);
-
-		builder.Property(c => c.Address)
+		builder.Property(x => x.Address)
 			.HasMaxLength(EntityConstants.Company.AddressMaxLength);
 
-		builder.Property(c => c.Status)
-			.IsRequired();
+		builder.Property(x => x.Phone)
+			.HasMaxLength(EntityConstants.Company.PhoneMaxLength);
 
-		builder.Property(c => c.Settings)
-			.HasMaxLength(EntityConstants.Common.SettingsMaxLength);
+		builder.Property(x => x.Email)
+			.HasMaxLength(EntityConstants.Company.EmailMaxLength);
 
-		// Indexes
-		builder.HasIndex(c => new { c.TenantId, c.Code })
-			.IsUnique();
+		// Filtered Indexes
+		builder.HasIndex(x => x.TenantId)
+			.HasFilter("\"IsDeleted\" = false")
+			.HasDatabaseName("IX_Companies_TenantId_Active");
 
-		builder.HasIndex(c => c.TenantId);
+		builder.HasIndex(x => new { x.TenantId, x.Code })
+			.IsUnique()
+			.HasFilter("\"IsDeleted\" = false")
+			.HasDatabaseName("IX_Companies_TenantId_Code_Unique_Active");
 
-		builder.HasIndex(c => c.Status);
+		builder.HasIndex(x => new { x.TenantId, x.Status })
+			.HasFilter("\"IsDeleted\" = false")
+			.HasDatabaseName("IX_Companies_TenantId_Status_Active");
 
-		// Relationships
-		builder.HasOne<Tenant>()
-			.WithMany()
-			.HasForeignKey(c => c.TenantId)
-			.OnDelete(DeleteBehavior.Restrict);
+		// NOT: Tenant relationship TenantConfiguration'da tanımlı
 	}
 }

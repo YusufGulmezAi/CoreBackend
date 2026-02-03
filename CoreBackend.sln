@@ -6,6 +6,9 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docker", "docker", "{4B9A54C7-A7EB-4F82-933E-220E0CA2BA95}"
+	ProjectSection(SolutionItems) = preProject
+		DockerCommands.txt = DockerCommands.txt
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "init-scripts", "init-scripts", "{DF55DF6C-A5E6-4E6A-A6C0-F86C0731573C}"
 EndProject

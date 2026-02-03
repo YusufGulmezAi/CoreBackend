@@ -16,6 +16,9 @@ public static class EntityConstants
 		public const int EmailMaxLength = 256;
 		public const int PhoneMaxLength = 20;
 		public const int MaxCompanyCountDefault = 5;
+		public const int ContactEmailMaxLength = 100;
+		public const int SubdomainMaxLength = 100;
+		public const int ContactPhoneMaxLength = 20;
 	}
 
 	/// <summary>

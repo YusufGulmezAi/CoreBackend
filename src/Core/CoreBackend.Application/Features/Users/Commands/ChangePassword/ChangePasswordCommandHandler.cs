@@ -1,28 +1,25 @@
 ﻿using MediatR;
+using Microsoft.EntityFrameworkCore;
 using CoreBackend.Application.Common.Interfaces;
 using CoreBackend.Domain.Common.Primitives;
-using CoreBackend.Domain.Entities;
 using CoreBackend.Domain.Errors;
 
 namespace CoreBackend.Application.Features.Users.Commands.ChangePassword;
 
 public class ChangePasswordCommandHandler : IRequestHandler<ChangePasswordCommand, Result>
 {
-	private readonly IRepositoryExtended<User, Guid> _userRepository;
+	private readonly IUnitOfWork _unitOfWork;
 	private readonly IPasswordHasher _passwordHasher;
 	private readonly ICurrentUserService _currentUserService;
-	private readonly IUnitOfWork _unitOfWork;
 
 	public ChangePasswordCommandHandler(
-		IRepositoryExtended<User, Guid> userRepository,
+		IUnitOfWork unitOfWork,
 		IPasswordHasher passwordHasher,
-		ICurrentUserService currentUserService,
-		IUnitOfWork unitOfWork)
+		ICurrentUserService currentUserService)
 	{
-		_userRepository = userRepository;
+		_unitOfWork = unitOfWork;
 		_passwordHasher = passwordHasher;
 		_currentUserService = currentUserService;
-		_unitOfWork = unitOfWork;
 	}
 
 	public async Task<Result> Handle(
@@ -34,10 +31,11 @@ public class ChangePasswordCommandHandler : IRequestHandler<ChangePasswordComman
 		if (!userId.HasValue)
 		{
 			return Result.Failure(
-				Error.Create(ErrorCodes.Auth.UnauthorizedAccess, "User not authenticated."));
+				Error.Create(ErrorCodes.Auth.Unauthorized, "User not authenticated."));
 		}
 
-		var user = await _userRepository.GetByIdAsync(userId.Value, cancellationToken);
+		var user = await _unitOfWork.Users
+			.FirstOrDefaultAsync(u => u.Id == userId.Value, cancellationToken);
 
 		if (user == null)
 		{
@@ -45,7 +43,6 @@ public class ChangePasswordCommandHandler : IRequestHandler<ChangePasswordComman
 				Error.Create(ErrorCodes.User.NotFound, "User not found."));
 		}
 
-		// Mevcut şifreyi doğrula
 		if (!_passwordHasher.VerifyPassword(request.CurrentPassword, user.PasswordHash))
 		{
 			return Result.Failure(
@@ -55,7 +52,6 @@ public class ChangePasswordCommandHandler : IRequestHandler<ChangePasswordComman
 		var newPasswordHash = _passwordHasher.HashPassword(request.NewPassword);
 		user.ChangePassword(newPasswordHash);
 
-		_userRepository.Update(user);
 		await _unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return Result.Success();

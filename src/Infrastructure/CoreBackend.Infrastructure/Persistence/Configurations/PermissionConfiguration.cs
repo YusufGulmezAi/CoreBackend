@@ -1,46 +1,48 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using CoreBackend.Domain.Entities;
 using CoreBackend.Domain.Constants;
+using CoreBackend.Domain.Entities;
 
 namespace CoreBackend.Infrastructure.Persistence.Configurations;
 
-/// <summary>
-/// Permission entity konfigürasyonu.
-/// </summary>
 public class PermissionConfiguration : IEntityTypeConfiguration<Permission>
 {
 	public void Configure(EntityTypeBuilder<Permission> builder)
 	{
-		// Tablo adı
 		builder.ToTable("Permissions");
 
-		// Primary Key
-		builder.HasKey(p => p.Id);
+		builder.HasKey(x => x.Id);
 
-		// Properties
-		builder.Property(p => p.Name)
+		builder.Property(x => x.Name)
 			.IsRequired()
 			.HasMaxLength(EntityConstants.Permission.NameMaxLength);
 
-		builder.Property(p => p.Code)
+		builder.Property(x => x.Code)
 			.IsRequired()
 			.HasMaxLength(EntityConstants.Permission.CodeMaxLength);
 
-		builder.Property(p => p.Description)
-			.HasMaxLength(EntityConstants.Permission.DescriptionMaxLength);
-
-		builder.Property(p => p.Group)
+		builder.Property(x => x.Group)
 			.IsRequired()
 			.HasMaxLength(EntityConstants.Permission.GroupMaxLength);
+
+		builder.Property(x => x.Description)
+			.HasMaxLength(EntityConstants.Permission.DescriptionMaxLength);
 
 		builder.Property(p => p.IsActive)
 			.IsRequired();
 
-		// Indexes
-		builder.HasIndex(p => p.Code)
-			.IsUnique();
+		// Unique Index (Filtered)
+		builder.HasIndex(x => x.Code)
+			.IsUnique()
+			.HasFilter("\"IsDeleted\" = false")
+			.HasDatabaseName("IX_Permissions_Code_Unique_Active");
 
-		builder.HasIndex(p => p.Group);
+		// Group index
+		builder.HasIndex(x => x.Group)
+			.HasFilter("\"IsDeleted\" = false")
+			.HasDatabaseName("IX_Permissions_Group_Active");
+
+		// Soft Delete Query Filter
+		builder.HasQueryFilter(x => !x.IsDeleted);
 	}
 }

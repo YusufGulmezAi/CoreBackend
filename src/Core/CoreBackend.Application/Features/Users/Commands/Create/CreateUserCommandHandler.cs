@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using Microsoft.EntityFrameworkCore;
 using CoreBackend.Application.Common.Interfaces;
 using CoreBackend.Contracts.Users.Responses;
 using CoreBackend.Domain.Common.Primitives;
@@ -9,27 +10,18 @@ namespace CoreBackend.Application.Features.Users.Commands.Create;
 
 public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Result<UserResponse>>
 {
-	private readonly IRepositoryExtended<User, Guid> _userRepository;
-	private readonly IRepositoryExtended<Role, Guid> _roleRepository;
-	private readonly IRepositoryExtended<UserRole, Guid> _userRoleRepository;
+	private readonly IUnitOfWork _unitOfWork;
 	private readonly IPasswordHasher _passwordHasher;
 	private readonly ICurrentUserService _currentUserService;
-	private readonly IUnitOfWork _unitOfWork;
 
 	public CreateUserCommandHandler(
-		IRepositoryExtended<User, Guid> userRepository,
-		IRepositoryExtended<Role, Guid> roleRepository,
-		IRepositoryExtended<UserRole, Guid> userRoleRepository,
+		IUnitOfWork unitOfWork,
 		IPasswordHasher passwordHasher,
-		ICurrentUserService currentUserService,
-		IUnitOfWork unitOfWork)
+		ICurrentUserService currentUserService)
 	{
-		_userRepository = userRepository;
-		_roleRepository = roleRepository;
-		_userRoleRepository = userRoleRepository;
+		_unitOfWork = unitOfWork;
 		_passwordHasher = passwordHasher;
 		_currentUserService = currentUserService;
-		_unitOfWork = unitOfWork;
 	}
 
 	public async Task<Result<UserResponse>> Handle(
@@ -41,13 +33,13 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Resul
 		if (!tenantId.HasValue)
 		{
 			return Result.Failure<UserResponse>(
-				Error.Create(ErrorCodes.Auth.UnauthorizedAccess, "Tenant not found."));
+				Error.Create(ErrorCodes.Auth.Unauthorized, "Tenant not found."));
 		}
 
 		// Email benzersizlik kontrolü
-		var existingUser = await _userRepository.FirstOrDefaultAsync(
-			u => u.Email == request.Email,
-			cancellationToken);
+		var existingUser = await _unitOfWork.Users
+			.AsNoTracking()
+			.FirstOrDefaultAsync(u => u.Email == request.Email, cancellationToken);
 
 		if (existingUser != null)
 		{
@@ -56,9 +48,9 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Resul
 		}
 
 		// Username benzersizlik kontrolü
-		existingUser = await _userRepository.FirstOrDefaultAsync(
-			u => u.Username == request.Username,
-			cancellationToken);
+		existingUser = await _unitOfWork.Users
+			.AsNoTracking()
+			.FirstOrDefaultAsync(u => u.Username == request.Username, cancellationToken);
 
 		if (existingUser != null)
 		{
@@ -77,9 +69,9 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Resul
 			request.LastName,
 			request.Phone);
 
-		user.ConfirmEmail(); // Admin tarafından oluşturulduğu için
+		user.ConfirmEmail();
 
-		await _userRepository.AddAsync(user, cancellationToken);
+		await _unitOfWork.Users.AddAsync(user, cancellationToken);
 
 		// Rolleri ata
 		var roleNames = new List<string>();
@@ -87,11 +79,14 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Resul
 		{
 			foreach (var roleId in request.RoleIds)
 			{
-				var role = await _roleRepository.GetByIdAsync(roleId, cancellationToken);
+				var role = await _unitOfWork.Roles
+					.AsNoTracking()
+					.FirstOrDefaultAsync(r => r.Id == roleId, cancellationToken);
+
 				if (role != null)
 				{
 					var userRole = UserRole.Create(tenantId.Value, user.Id, roleId);
-					await _userRoleRepository.AddAsync(userRole, cancellationToken);
+					await _unitOfWork.UserRoles.AddAsync(userRole, cancellationToken);
 					roleNames.Add(role.Code);
 				}
 			}

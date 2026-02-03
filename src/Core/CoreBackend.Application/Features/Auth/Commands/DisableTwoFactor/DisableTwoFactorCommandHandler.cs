@@ -9,20 +9,20 @@ namespace CoreBackend.Application.Features.Auth.Commands.DisableTwoFactor;
 
 public class DisableTwoFactorCommandHandler : IRequestHandler<DisableTwoFactorCommand, Result>
 {
-	private readonly IRepositoryExtended<User, Guid> _userRepository;
+	//private readonly IRepositoryExtended<User, Guid> _userRepository;
 	private readonly ICurrentUserService _currentUserService;
 	private readonly IPasswordHasher _passwordHasher;
 	private readonly ITotpService _totpService;
 	private readonly IUnitOfWork _unitOfWork;
 
 	public DisableTwoFactorCommandHandler(
-		IRepositoryExtended<User, Guid> userRepository,
+		//IRepositoryExtended<User, Guid> userRepository,
 		ICurrentUserService currentUserService,
 		IPasswordHasher passwordHasher,
 		ITotpService totpService,
 		IUnitOfWork unitOfWork)
 	{
-		_userRepository = userRepository;
+		//_userRepository = userRepository;
 		_currentUserService = currentUserService;
 		_passwordHasher = passwordHasher;
 		_totpService = totpService;
@@ -35,10 +35,11 @@ public class DisableTwoFactorCommandHandler : IRequestHandler<DisableTwoFactorCo
 
 		if (!userId.HasValue)
 		{
-			return Result.Failure(Error.Create(ErrorCodes.Auth.UnauthorizedAccess, "Not authenticated."));
+			return Result.Failure(Error.Create(ErrorCodes.Auth.Unauthorized, "Not authenticated."));
 		}
 
-		var user = await _userRepository.GetByIdAsync(userId.Value, cancellationToken);
+		var user = await _unitOfWork.Users.FindAsync(userId.Value, cancellationToken);
+
 		if (user == null)
 		{
 			return Result.Failure(Error.Create(ErrorCodes.User.NotFound, "User not found."));
@@ -67,7 +68,7 @@ public class DisableTwoFactorCommandHandler : IRequestHandler<DisableTwoFactorCo
 		}
 
 		user.DisableTwoFactor();
-		_userRepository.Update(user);
+		_unitOfWork.Users.Update(user);
 		await _unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return Result.Success();

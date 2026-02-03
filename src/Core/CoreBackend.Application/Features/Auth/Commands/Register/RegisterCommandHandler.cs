@@ -1,39 +1,25 @@
 ﻿using MediatR;
+using Microsoft.EntityFrameworkCore;
 using CoreBackend.Application.Common.Interfaces;
 using CoreBackend.Contracts.Auth.Responses;
 using CoreBackend.Domain.Common.Primitives;
 using CoreBackend.Domain.Entities;
-using CoreBackend.Domain.Errors;
 using CoreBackend.Domain.Enums;
+using CoreBackend.Domain.Errors;
 
 namespace CoreBackend.Application.Features.Auth.Commands.Register;
 
-/// <summary>
-/// Register command handler.
-/// </summary>
 public class RegisterCommandHandler : IRequestHandler<RegisterCommand, Result<RegisterResponse>>
 {
-	private readonly IRepositoryExtended<Tenant, Guid> _tenantRepository;
-	private readonly IRepositoryExtended<User, Guid> _userRepository;
-	private readonly IRepositoryExtended<Role, Guid> _roleRepository;
-	private readonly IRepositoryExtended<UserRole, Guid> _userRoleRepository;
-	private readonly IPasswordHasher _passwordHasher;
 	private readonly IUnitOfWork _unitOfWork;
+	private readonly IPasswordHasher _passwordHasher;
 
 	public RegisterCommandHandler(
-		IRepositoryExtended<Tenant, Guid> tenantRepository,
-		IRepositoryExtended<User, Guid> userRepository,
-		IRepositoryExtended<Role, Guid> roleRepository,
-		IRepositoryExtended<UserRole, Guid> userRoleRepository,
-		IPasswordHasher passwordHasher,
-		IUnitOfWork unitOfWork)
+		IUnitOfWork unitOfWork,
+		IPasswordHasher passwordHasher)
 	{
-		_tenantRepository = tenantRepository;
-		_userRepository = userRepository;
-		_roleRepository = roleRepository;
-		_userRoleRepository = userRoleRepository;
-		_passwordHasher = passwordHasher;
 		_unitOfWork = unitOfWork;
+		_passwordHasher = passwordHasher;
 	}
 
 	public async Task<Result<RegisterResponse>> Handle(
@@ -41,9 +27,8 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, Result<Re
 		CancellationToken cancellationToken)
 	{
 		// 1. Email benzersizlik kontrolü (global)
-		var existingUser = await _userRepository.FirstOrDefaultIgnoreFiltersAsync(
-			u => u.Email == request.Email,
-			cancellationToken);
+		var existingUser = await _unitOfWork.QueryIgnoreFilters<User>()
+			.FirstOrDefaultAsync(u => u.Email == request.Email, cancellationToken);
 
 		if (existingUser != null)
 		{
@@ -57,7 +42,7 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, Result<Re
 			request.Email,
 			request.Phone);
 
-		await _tenantRepository.AddAsync(tenant, cancellationToken);
+		await _unitOfWork.Tenants.AddAsync(tenant, cancellationToken);
 
 		// 3. Varsayılan TenantAdmin rolü oluştur
 		var adminRole = Role.Create(
@@ -68,7 +53,7 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, Result<Re
 			"Full access to tenant resources",
 			isSystemRole: true);
 
-		await _roleRepository.AddAsync(adminRole, cancellationToken);
+		await _unitOfWork.Roles.AddAsync(adminRole, cancellationToken);
 
 		// 4. Kullanıcı oluştur
 		var passwordHash = _passwordHasher.HashPassword(request.Password);
@@ -82,32 +67,26 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, Result<Re
 			request.LastName,
 			request.Phone);
 
-		// Email onayını atla (geliştirme için)
 		user.ConfirmEmail();
 
-		await _userRepository.AddAsync(user, cancellationToken);
+		await _unitOfWork.Users.AddAsync(user, cancellationToken);
 
 		// 5. Kullanıcıya TenantAdmin rolü ata
-		var userRole = UserRole.Create(
-			tenant.Id,
-			user.Id,
-			adminRole.Id);
+		var userRole = UserRole.Create(tenant.Id, user.Id, adminRole.Id);
 
-		await _userRoleRepository.AddAsync(userRole, cancellationToken);
+		await _unitOfWork.UserRoles.AddAsync(userRole, cancellationToken);
 
 		// 6. Kaydet
 		await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-		// 7. Response oluştur
-		var response = new RegisterResponse
+		// 7. Response
+		return Result.Success(new RegisterResponse
 		{
 			TenantId = tenant.Id,
 			UserId = user.Id,
 			Email = user.Email,
 			Message = "Registration successful. You can now login.",
 			RequiresEmailConfirmation = false
-		};
-
-		return Result.Success(response);
+		});
 	}
 }

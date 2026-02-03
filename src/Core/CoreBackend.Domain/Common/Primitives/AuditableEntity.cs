@@ -12,8 +12,8 @@ public abstract class AuditableEntity<TId> : BaseEntity<TId>, IAuditable, ISoftD
 	// IAuditable
 	public DateTime CreatedAt { get; private set; }
 	public Guid? CreatedBy { get; private set; }
-	public DateTime? ModifiedAt { get; private set; }
-	public Guid? ModifiedBy { get; private set; }
+	public DateTime? UpdatedAt { get; private set; }
+	public Guid? UpdatedBy { get; private set; }
 
 	// ISoftDeletable
 	public bool IsDeleted { get; private set; }
@@ -37,8 +37,8 @@ public abstract class AuditableEntity<TId> : BaseEntity<TId>, IAuditable, ISoftD
 
 	public void SetModified(Guid? userId = null)
 	{
-		ModifiedAt = DateTime.UtcNow;
-		ModifiedBy = userId;
+		UpdatedAt = DateTime.UtcNow;
+		UpdatedBy = userId;
 	}
 
 	public void Delete(Guid? deletedBy = null)

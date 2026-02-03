@@ -92,6 +92,16 @@ public class User : TenantAuditableEntity<Guid>
 	/// </summary>
 	public string FullName => $"{FirstName} {LastName}";
 
+	/// <summary>
+	/// Kullanıcı-Rol ilişkileri.
+	/// </summary>
+	public virtual ICollection<UserRole> UserRoles { get; private set; } = new List<UserRole>();
+
+	/// <summary>
+	/// Kullanıcı-Organizasyon-Rol ilişkileri.
+	/// </summary>
+	public virtual ICollection<UserCompanyRole> UserCompanyRoles { get; private set; } = new List<UserCompanyRole>();
+
 	// EF Core için private constructor
 	private User() : base() { }
 

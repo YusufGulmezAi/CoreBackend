@@ -26,33 +26,23 @@ public class TransactionBehavior<TRequest, TResponse> : IPipelineBehavior<TReque
 	}
 
 	public async Task<TResponse> Handle(
-		TRequest request,
-		RequestHandlerDelegate<TResponse> next,
-		CancellationToken cancellationToken)
+	TRequest request,
+	RequestHandlerDelegate<TResponse> next,
+	CancellationToken cancellationToken)
 	{
-		var requestName = typeof(TRequest).Name;
-
-		// Query'ler için transaction kullanma
-		if (requestName.EndsWith("Query"))
-		{
+		if (typeof(TRequest).Name.EndsWith("Query"))
 			return await next();
-		}
 
-		// Command'lar için sadece SaveChanges yeterli
-		// EF Core zaten her SaveChanges için implicit transaction kullanır
-		// Manuel transaction yerine bunu tercih ediyoruz (ExecutionStrategy uyumluluğu için)
+		await _unitOfWork.BeginTransactionAsync(cancellationToken);
 		try
 		{
 			var response = await next();
-
-			// Handler içinde SaveChanges çağrılmadıysa burada çağır
-			// (Genellikle handler zaten çağırır)
-
+			await _unitOfWork.CommitTransactionAsync(cancellationToken);
 			return response;
 		}
-		catch (Exception ex)
+		catch
 		{
-			_logger.LogError(ex, "Error handling {RequestName}", requestName);
+			await _unitOfWork.RollbackTransactionAsync(cancellationToken);
 			throw;
 		}
 	}
