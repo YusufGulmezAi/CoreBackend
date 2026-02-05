@@ -7,7 +7,7 @@ namespace CoreBackend.Infrastructure.Persistence.Configurations;
 
 public class RolePermissionConfiguration : TenantEntityConfiguration<RolePermission>
 {
-	public void Configure(EntityTypeBuilder<RolePermission> builder)
+	public override void Configure(EntityTypeBuilder<RolePermission> builder)
 	{
 		builder.ToTable("RolePermissions");
 

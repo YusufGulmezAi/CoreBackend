@@ -17,7 +17,7 @@ public class UserCompanyRole : CompanyAuditableEntity<Guid>
 	/// <summary>
 	/// Kullanıcı.
 	/// </summary>
-	public User User { get; private set; }
+	public User? User { get; private set; } // Changed to nullable
 
 	/// <summary>
 	/// Rol Id.
@@ -27,12 +27,7 @@ public class UserCompanyRole : CompanyAuditableEntity<Guid>
 	/// <summary>
 	/// Rol.
 	/// </summary>
-	public Role Role { get; private set; }
-
-	/// <summary>
-	/// Şirket Id.
-	/// </summary>
-	public Guid CompanyId { get; private set; }
+	public Role? Role { get; private set; } // Changed to nullable
 
 	/// <summary>
 	/// Atama başlangıç tarihi.
@@ -48,7 +43,6 @@ public class UserCompanyRole : CompanyAuditableEntity<Guid>
 	/// Aktif mi?
 	/// </summary>
 	public bool IsActive { get; private set; }
-
 
 
 

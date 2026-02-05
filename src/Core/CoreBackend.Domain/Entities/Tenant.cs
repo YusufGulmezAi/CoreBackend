@@ -28,12 +28,12 @@ public class Tenant : AuditableEntity<Guid>
 	/// <summary>
 	/// Hesap durumu.
 	/// </summary>
-	public TenantStatus Status { get; private set; }
+	public TenantStatus? Status { get; private set; }
 
 	/// <summary>
 	/// Abonelik başlangıç tarihi.
 	/// </summary>
-	public DateTime SubscriptionStartDate { get; private set; }
+	public DateTime? SubscriptionStartDate { get; private set; }
 
 	/// <summary>
 	/// Abonelik bitiş tarihi.
@@ -72,7 +72,7 @@ public class Tenant : AuditableEntity<Guid>
 	public int? SessionTimeoutMinutes { get; private set; }
 
 	// 2FA Policy Alanları (mevcut alanlara ekle)
-	public TwoFactorPolicy TwoFactorPolicy { get; private set; }
+	public TwoFactorPolicy? TwoFactorPolicy { get; private set; }
 
 	/// <summary>
 	/// Geçerli kullanıcı veya bağlam için izin verilen iki faktörlü kimlik doğrulama yöntemlerinin listesini alır.
@@ -102,7 +102,13 @@ public class Tenant : AuditableEntity<Guid>
 	public virtual ICollection<UserSession> UserSessions { get; private set; } = new List<UserSession>();
 
 	// EF Core için private constructor
-	private Tenant() : base() { }
+	private Tenant() : base()
+	{
+		// Set default values for non-nullable properties in the private parameterless constructor
+		Subdomain = string.Empty;
+		ContactEmail = string.Empty;
+		ContactPhone = string.Empty;
+	}
 
 	private Tenant(
 		Guid id,
@@ -119,6 +125,9 @@ public class Tenant : AuditableEntity<Guid>
 		MaxCompanyCount = maxCompanyCount;
 		SessionTimeoutMinutes = sessionTimeoutMinutes;
 		SubscriptionStartDate = DateTime.UtcNow;
+		Subdomain = name.ToLowerInvariant().Replace(" ", "-");
+		ContactEmail = email;
+		ContactPhone = phone ?? "";
 	}
 
 		/// <summary>

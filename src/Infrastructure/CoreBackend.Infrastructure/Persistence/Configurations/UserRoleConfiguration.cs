@@ -7,7 +7,7 @@ namespace CoreBackend.Infrastructure.Persistence.Configurations;
 
 public class UserRoleConfiguration : TenantEntityConfiguration<UserRole>
 {
-	public void Configure(EntityTypeBuilder<UserRole> builder)
+	public override void Configure(EntityTypeBuilder<UserRole> builder)
 	{
 		builder.ToTable("UserRoles");
 

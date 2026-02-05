@@ -8,7 +8,10 @@
 
   <ItemGroup>
     <Folder Include="Tenants\Responses\" />
-    <Folder Include="Tenants\Requests\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CoreBackend.Domain\CoreBackend.Domain.csproj" />
   </ItemGroup>
 
 </Project>

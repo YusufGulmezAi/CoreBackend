@@ -15,7 +15,7 @@ public abstract class CompanyAuditableEntity<TId> : TenantAuditableEntity<TId>, 
 	/// <summary>
 	/// Şirket.
 	/// </summary>
-	public Company Company { get; private set; }
+	public Company Company { get; private set; } = null!;
 
 	protected CompanyAuditableEntity() : base() { }
 

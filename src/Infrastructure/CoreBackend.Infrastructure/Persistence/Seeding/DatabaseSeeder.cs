@@ -45,20 +45,31 @@ public class DatabaseSeeder
 	{
 		try
 		{
+			_logger.LogInformation("=== DATABASE SEEDING STARTED ===");
+
 			// Migration'ları uygula
+			_logger.LogInformation("Applying migrations...");
 			await _context.Database.MigrateAsync(cancellationToken);
+			_logger.LogInformation("Migrations applied successfully");
 
 			// Seed işlemleri
+			_logger.LogInformation("Seeding permissions...");
 			await SeedPermissionsAsync(cancellationToken);
+
+			_logger.LogInformation("Seeding system tenant... Email: {Email}", _superAdminSettings.Email ?? "NULL");
 			await SeedSystemTenantAsync(cancellationToken);
+
+			_logger.LogInformation("Seeding system roles...");
 			await SeedSystemRolesAsync(cancellationToken);
+
+			_logger.LogInformation("Seeding super admin... Username: {Username}", _superAdminSettings.Username ?? "NULL");
 			await SeedSuperAdminAsync(cancellationToken);
 
-			_logger.LogInformation("Database seeding completed successfully");
+			_logger.LogInformation("=== DATABASE SEEDING COMPLETED ===");
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "An error occurred while seeding the database");
+			_logger.LogError(ex, "=== DATABASE SEEDING FAILED === Error: {Message}", ex.Message);
 			throw;
 		}
 	}
@@ -112,6 +123,9 @@ public class DatabaseSeeder
 	/// <summary>
 	/// Sistem tenant'ını oluşturur.
 	/// </summary>
+	/// <summary>
+	/// Sistem tenant'ını oluşturur.
+	/// </summary>
 	private async Task SeedSystemTenantAsync(CancellationToken cancellationToken)
 	{
 		var exists = await _context.Tenants
@@ -119,11 +133,22 @@ public class DatabaseSeeder
 			.AnyAsync(t => t.Id == SystemTenantId, cancellationToken);
 
 		if (exists)
+		{
+			_logger.LogInformation("System tenant already exists");
 			return;
+		}
+
+		// Email null kontrolü
+		var email = _superAdminSettings.Email;
+		if (string.IsNullOrWhiteSpace(email))
+		{
+			email = "system@corebackend.local";
+			_logger.LogWarning("SuperAdmin:Email is empty, using default: {Email}", email);
+		}
 
 		var systemTenant = Tenant.Create(
 			"System",
-			_superAdminSettings.Email,
+			email,
 			null,
 			maxCompanyCount: int.MaxValue,
 			sessionTimeoutMinutes: 60);
@@ -131,6 +156,11 @@ public class DatabaseSeeder
 		// Private ID setter için reflection kullan
 		typeof(Tenant).GetProperty("Id")!
 			.SetValue(systemTenant, SystemTenantId);
+
+		// Zorunlu alanları set et
+		systemTenant.Subdomain = "system";
+		systemTenant.ContactEmail = email;
+		systemTenant.ContactPhone = "";
 
 		await _context.Tenants.AddAsync(systemTenant, cancellationToken);
 		await _context.SaveChangesAsync(cancellationToken);

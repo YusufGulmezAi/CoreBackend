@@ -83,6 +83,7 @@ public class Company : TenantAuditableEntity<Guid>
 		Phone = phone;
 		Email = email;
 		Status = CompanyStatus.Active;
+		UserCompanyRoles = [];
 	}
 	public static Company Create(
 		Guid tenantId,

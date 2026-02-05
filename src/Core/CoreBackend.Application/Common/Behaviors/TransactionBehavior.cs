@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using CoreBackend.Application.Common.Interfaces;
 
@@ -9,8 +10,6 @@ namespace CoreBackend.Application.Common.Behaviors;
 /// Command'ları transaction içinde çalıştırır.
 /// Execution strategy ile uyumlu çalışır.
 /// </summary>
-/// <typeparam name="TRequest">Request tipi</typeparam>
-/// <typeparam name="TResponse">Response tipi</typeparam>
 public class TransactionBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
 	where TRequest : IRequest<TResponse>
 {
@@ -26,13 +25,28 @@ public class TransactionBehavior<TRequest, TResponse> : IPipelineBehavior<TReque
 	}
 
 	public async Task<TResponse> Handle(
-	TRequest request,
-	RequestHandlerDelegate<TResponse> next,
-	CancellationToken cancellationToken)
+		TRequest request,
+		RequestHandlerDelegate<TResponse> next,
+		CancellationToken cancellationToken)
 	{
+		// Query'ler için transaction kullanma
 		if (typeof(TRequest).Name.EndsWith("Query"))
 			return await next();
 
+		// Login gibi bazı command'lar için de transaction gerekli olmayabilir
+		// İsteğe bağlı: Transaction gerektiren command'ları marker interface ile belirle
+		var requiresTransaction = typeof(TRequest).GetInterfaces()
+			.Any(i => i.Name == "ITransactionalRequest");
+
+		if (!requiresTransaction)
+		{
+			// Transaction olmadan çalıştır, sadece SaveChanges yap
+			var response = await next();
+			await _unitOfWork.SaveChangesAsync(cancellationToken);
+			return response;
+		}
+
+		// Transaction ile çalıştır
 		await _unitOfWork.BeginTransactionAsync(cancellationToken);
 		try
 		{

@@ -81,8 +81,3 @@ networks:
   enterprise-network:
     name: enterprise-network
     driver: bridge
-api:
-  environment:
-      - SuperAdmin__Email=${SUPERADMIN_EMAIL}
-      - SuperAdmin__Password=${SUPERADMIN_PASSWORD}
-      - SuperAdmin__Username=${SUPERADMIN_USERNAME}
