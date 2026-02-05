@@ -9,12 +9,12 @@ public class UserRoleConfiguration : TenantEntityConfiguration<UserRole>
 {
 	public override void Configure(EntityTypeBuilder<UserRole> builder)
 	{
+		// Base configuration'ı çağır (soft delete filter)
+		base.Configure(builder);
+
 		builder.ToTable("UserRoles");
 
 		builder.HasKey(x => x.Id);
-
-		// Soft Delete Query Filter
-		builder.HasQueryFilter(x => !x.IsDeleted);
 
 		// Filtered Indexes
 		builder.HasIndex(x => x.TenantId)
@@ -30,12 +30,7 @@ public class UserRoleConfiguration : TenantEntityConfiguration<UserRole>
 			.HasFilter("\"IsDeleted\" = false AND \"IsActive\" = true")
 			.HasDatabaseName("IX_UserRoles_TenantId_UserId_Active");
 
-		// Relationships - Tenant hariç (TenantId sadece FK olarak kalıyor)
-		builder.HasOne<Tenant>()
-			.WithMany()
-			.HasForeignKey(x => x.TenantId)
-			.OnDelete(DeleteBehavior.Restrict);
-
+		// Relationships - Tenant ilişkisi KALDIRILDI (TenantId FK olarak yeterli)
 		builder.HasOne(x => x.User)
 			.WithMany(u => u.UserRoles)
 			.HasForeignKey(x => x.UserId)

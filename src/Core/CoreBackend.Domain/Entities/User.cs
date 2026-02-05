@@ -106,23 +106,26 @@ public class User : TenantAuditableEntity<Guid>
 	private User() : base() { }
 
 	private User(
-		Guid id,
-		Guid tenantId,
-		string username,
-		string email,
-		string passwordHash,
-		string firstName,
-		string lastName) : base(id, tenantId)
+	Guid id,
+	Guid tenantId,
+	string username,
+	string email,
+	string passwordHash,
+	string firstName,
+	string lastName,
+	string? phone = null) : base(id, tenantId)
 	{
 		Username = username;
 		Email = email;
 		PasswordHash = passwordHash;
 		FirstName = firstName;
 		LastName = lastName;
+		Phone = phone;  // <-- Bunu ekle
 		Status = UserStatus.PendingVerification;
 		EmailConfirmed = false;
 		FailedLoginAttempts = 0;
 	}
+
 
 	/// <summary>
 	/// Yeni kullanıcı oluşturur.
@@ -143,7 +146,8 @@ public class User : TenantAuditableEntity<Guid>
 			email,
 			passwordHash,
 			firstName,
-			lastName);
+			lastName,
+			phone);  // <-- phone'u constructor'a geç
 	}
 
 	/// <summary>

@@ -20,7 +20,13 @@ public enum RoleLevel
 
 	/// <summary>
 	/// Company seviyesi. Sadece belirli şirkette geçerli.
-	/// Örnek: Okul Müdürü, Öğretmen, Veli
+	/// Örnek: Okul Müdürü, Öğretmen
 	/// </summary>
-	Company = 3
+	Company = 3,
+
+	/// <summary>
+	/// Kullanıcı seviyesi. Bireysel kullanıcı rolü.
+	/// Örnek: Standart Kullanıcı, Veli, Öğrenci
+	/// </summary>
+	User = 4
 }

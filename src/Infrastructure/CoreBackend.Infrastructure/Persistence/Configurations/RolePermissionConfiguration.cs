@@ -9,12 +9,12 @@ public class RolePermissionConfiguration : TenantEntityConfiguration<RolePermiss
 {
 	public override void Configure(EntityTypeBuilder<RolePermission> builder)
 	{
+		// Base configuration'ı çağır (soft delete filter)
+		base.Configure(builder);
+
 		builder.ToTable("RolePermissions");
 
 		builder.HasKey(x => x.Id);
-
-		// Soft Delete Query Filter
-		builder.HasQueryFilter(x => !x.IsDeleted);
 
 		// Filtered Indexes
 		builder.HasIndex(x => x.TenantId)
@@ -30,12 +30,7 @@ public class RolePermissionConfiguration : TenantEntityConfiguration<RolePermiss
 			.HasFilter("\"IsDeleted\" = false")
 			.HasDatabaseName("IX_RolePermissions_RoleId_Active");
 
-		// Relationships - Tenant hariç
-		builder.HasOne<Tenant>()
-			.WithMany()
-			.HasForeignKey(x => x.TenantId)
-			.OnDelete(DeleteBehavior.Restrict);
-
+		// Relationships - Tenant ilişkisi KALDIRILDI (TenantId FK olarak yeterli)
 		builder.HasOne(x => x.Role)
 			.WithMany(r => r.RolePermissions)
 			.HasForeignKey(x => x.RoleId)
